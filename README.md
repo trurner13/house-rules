@@ -1,8 +1,9 @@
 # house-rules
 
 Standing rules for working with coding agents, plus the hooks and CI gates that
-enforce them. Written once here, then vendored into every repo I work in, so the
-same standards load in every session on any machine from a plain clone.
+enforce them. Written once here, then vendored into the repos I work in,
+21 of them today, so the same standards load in every session on any machine
+from a plain clone.
 
 The premise is that a rule an agent is merely *asked* to follow is advice, not a
 control. Advice is fine for style. It is not fine for "don't drop the database"
