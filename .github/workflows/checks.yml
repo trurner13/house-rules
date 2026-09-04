@@ -1,0 +1,34 @@
+name: checks
+
+# Dogfood gate: this knowledge-base repo runs its own lightweight quality checks
+# (the prose equivalent of "fundamentals first" + "deterministic quality gates").
+# Nothing proceeds on red.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Markdown lint (published surface)
+        run: npx --yes markdownlint-cli2
+      - name: Internal links resolve
+        run: node scripts/check-links.mjs
+      - name: RULES.md stays lean
+        run: node scripts/check-rules-lean.mjs
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      # The gate's own tests run FIRST: a completeness gate nobody has watched fail is
+      # a claim, not a check.
+      - name: Completeness gate's own tests
+        run: python templates/hooks/test-check-committed.py
+      - name: A fresh clone is the deliverable
+        run: python templates/hooks/check-committed.py --ci

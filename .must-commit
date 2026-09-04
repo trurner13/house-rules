@@ -1,0 +1,8 @@
+# Paths this repo must ship, beyond check-committed.py's built-in list, and the
+# deliberate exemptions. One per line; a leading '-' exempts. See
+# templates/repo-structure.md - "What must be committed, what may be ignored".
+
+# .specs-raw/ is re-creatable scratch for raw conference spec extraction (it holds a
+# downloaded yt-dlp.exe). Re-creatable, not a deliverable, and already recorded as
+# such in discussion/README.md - so it does not need a "can't give you" entry.
+-.specs-raw/

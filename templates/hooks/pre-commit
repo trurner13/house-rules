@@ -1,0 +1,114 @@
+#!/bin/sh
+# Refuse to commit unresolved content, or to commit over an in-progress
+# operation that has its own --continue.
+#
+# Why this exists: `git add -A` during an unresolved merge CLEARS the unmerged
+# state, after which `git commit` succeeds and writes <<<<<<< markers onto the
+# branch. Without the `add -A`, git would have refused. Any "stage everything"
+# automation -- including a checkpoint hook -- will do this unless stopped here.
+#
+# MERGE_HEAD is deliberately NOT in the reject list below. Finishing a RESOLVED
+# merge is an ordinary commit (`git merge --continue` runs this same hook), so
+# rejecting on MERGE_HEAD alone made every conflicted merge in this repo
+# impossible to complete -- and a guard that blocks legitimate work teaches
+# people to reach for --no-verify, which also disables commit-msg. The hazard
+# above is caught by the SUBSTANTIVE checks in conflict-scan.sh: `add -A` over
+# an unresolved merge leaves markers in the staged content, and the scan sees
+# them. Clean auto-merges skip this hook entirely and are covered by
+# pre-merge-commit.
+#
+# Installed via core.hooksPath=.githooks -- see agent-constraints/session-lifecycle.md
+
+git_dir=$(git rev-parse --absolute-git-dir) || exit 0
+fail=0
+
+# Operations whose own --continue is the right way out; a bare `git commit`
+# here is a mistake regardless of whether the content is clean.
+for f in CHERRY_PICK_HEAD REVERT_HEAD BISECT_LOG; do
+  if [ -e "$git_dir/$f" ]; then
+    echo "pre-commit REJECTED: $f exists - an operation is still in progress." >&2
+    echo "  Finish it or abort it before committing." >&2
+    fail=1
+  fi
+done
+
+for d in rebase-merge rebase-apply; do
+  if [ -d "$git_dir/$d" ]; then
+    echo "pre-commit REJECTED: a rebase is in progress ($d)." >&2
+    echo "  Run 'git rebase --continue' or 'git rebase --abort' first." >&2
+    fail=1
+  fi
+done
+
+# Unresolved conflicts / conflict markers in staged content.
+if ! sh "$(git rev-parse --show-toplevel)/.githooks/conflict-scan.sh"; then
+  fail=1
+  if [ -e "$git_dir/MERGE_HEAD" ]; then
+    echo "  A merge is in progress. If you ran 'git add -A' over an unresolved" >&2
+    echo "  conflict, that cleared the unmerged state and staged the markers." >&2
+    echo "  Fix the file(s) above, re-stage, and commit again." >&2
+  fi
+fi
+
+# --- python-backed gates ----------------------------------------------------------
+# Resolve an interpreter ONCE for both gates below.
+#
+# command -v is not enough on Windows: python3 resolves to the Microsoft Store stub,
+# which is on PATH, prints "Python was not found" and exits non-zero. That made a gate
+# reject every commit regardless of correctness -- and a gate that always fails gets
+# bypassed, which is worse than one that never runs. So prove the interpreter actually
+# executes, not merely that it resolves.
+py=""
+for c in python3 python py; do
+  if command -v "$c" >/dev/null 2>&1 && "$c" -c "import sys" >/dev/null 2>&1; then
+    py="$c"; break
+  fi
+done
+
+repo_root=$(git rev-parse --show-toplevel)
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+# run_gate <script-name> <what a failure means>
+run_gate() {
+  script="$repo_root/scripts/$1"
+  [ -f "$script" ] || return 0
+  if [ -z "$py" ]; then
+    # No interpreter is a reason to SAY SO, not to pass quietly.
+    echo "pre-commit: WARNING - no python found; $1 did not run." >&2
+    return 0
+  fi
+  if ! out=$("$py" "$script" 2>&1); then
+    echo "pre-commit REJECTED: $2" >&2
+    printf '%s\n' "$out" | sed 's/^/    /' >&2
+    return 1
+  fi
+  return 0
+}
+
+# The issue tracker's own well-formedness gate. check-issues.py shipped with the
+# tracker but for a while nothing ran it -- an instruction the agent was ASKED to
+# honour, which is what "gates as code, not prompts" rules out. Found in an onboarded repo
+# 2026-08-24; the call was then lost again in ba6cd1a while fixing the merge hooks and
+# restored 2026-09-01. A gate nothing invokes is indistinguishable from no gate, and
+# the loss is silent both times -- which is why both gates now run through one helper.
+if printf '%s\n' "$staged" | grep -q '^issues/.*\.md$'; then
+  run_gate check-issues.py "the issue tracker is not well-formed." || fail=1
+fi
+
+# Completeness gate: would a fresh clone of this repo still work? Fires when the
+# IGNORE SURFACE changes, because that is the moment a repo becomes broken. Gating it
+# that way keeps the hook from wedging every unrelated commit on a pre-existing
+# condition -- CI runs the full check on every push.
+if printf '%s\n' "$staged" | grep -qE '(^|/)\.gitignore$|^\.must-commit$'; then
+  run_gate check-committed.py "a fresh clone would be missing files." || fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "" >&2
+  echo "  Do NOT reach for --no-verify: it disables commit-msg as well, which is" >&2
+  echo "  the hook that makes a checkpoint discoverable to the next session." >&2
+  echo "" >&2
+  exit 1
+fi
+
+exit 0

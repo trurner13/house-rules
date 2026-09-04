@@ -1,0 +1,25 @@
+{
+  // Lenient markdown lint for a prose knowledge base: keep structural hygiene
+  // (blank lines around headings/lists/fences, code-fence language), drop the
+  // cosmetic rules that fight long-form prose.
+  "config": {
+    "default": true,
+    "MD013": false, // line length — our docs wrap prose, not at 80 cols
+    "MD049": false, // emphasis style — we use both * and _
+    "MD033": false, // inline HTML — we use <!-- comments --> and tables
+    "MD041": false, // first line need not be a heading — templates open with a comment
+    "MD034": false, // bare URLs — recordings/links lists use them
+    "MD024": false, // duplicate headings — Day 1 / Day 2 tables reuse subheads
+    "MD040": false, // fenced code language — our fences are prompts/trees/plain
+    "MD060": false, // table column style — don't enforce pipe alignment
+    "MD028": false  // blank line in blockquote — we use adjacent note blockquotes
+    // NB: MD051 (valid link fragments) stays ON — it catches broken #anchors.
+  },
+  // Lint the PROPAGATED / published surface — the entry docs, rules, and templates
+  // that get vendored into other repos and must be clean. Internal working notes
+  // (discussion/, knowledge/, TODO.md) and scratch/transcripts are exempt.
+  "globs": [
+    "README.md", "CLAUDE.md", "CONTRIBUTING.md", "ADOPTION.md",
+    "GETTING-STARTED.md", "SPEC.md", "rules/**/*.md", "templates/**/*.md"
+  ]
+}

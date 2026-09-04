@@ -1,0 +1,39 @@
+#!/bin/sh
+# Reject a checkpoint commit that omits the handover trailer.
+#
+# A wip(...) commit is a parked state that a LATER session has to pick up. The
+# Next-Step: trailer is the only thing that tells it where to resume, and it is
+# what `git for-each-ref --format='%(trailers:key=Next-Step,...)'` reads. A
+# checkpoint without it is invisible to the reconciliation pass.
+#
+# Installed via core.hooksPath=.githooks -- see agent-constraints/session-lifecycle.md
+
+msg_file="$1"
+subject=$(head -n 1 "$msg_file")
+
+# fixup!/squash! commits get squashed away before they reach anyone else.
+if printf '%s' "$subject" | grep -qE '^(fixup|squash)!'; then
+  exit 0
+fi
+
+# Only checkpoints are governed by this hook.
+if ! printf '%s' "$subject" | grep -q '^wip('; then
+  exit 0
+fi
+
+if ! grep -qE '^Next-Step:[[:space:]]*[^[:space:]]' "$msg_file"; then
+  echo "" >&2
+  echo "commit-msg REJECTED: a wip(...) checkpoint needs a 'Next-Step:' trailer." >&2
+  echo "" >&2
+  echo "  It is the handover. Without it the next session sees a parked branch" >&2
+  echo "  and no idea what it was parked mid-way through." >&2
+  echo "" >&2
+  echo "  Add a blank line, then a line such as:" >&2
+  echo "    Next-Step: re-run the calibration suite against ADR-0035" >&2
+  echo "" >&2
+  echo "  Do NOT reach for --no-verify: it disables this hook AND pre-commit." >&2
+  echo "" >&2
+  exit 1
+fi
+
+exit 0

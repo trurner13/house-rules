@@ -1,0 +1,23 @@
+#!/bin/sh
+# Run the conflict scan on merges git commits ITSELF (a clean auto-merge).
+#
+# Why this exists: pre-commit does NOT run on an auto-merge -- git runs THIS
+# hook instead. That gap is not theoretical. On 2026-08-21 the runpod merge
+# auto-resolved and committed <<<<<<< markers into .gitignore with pre-commit
+# already installed (ebcb875 stripped them out afterwards). "Auto-merged
+# cleanly" is a claim about git's ability to place hunks, never about whether
+# the result is coherent.
+#
+# Installed via core.hooksPath=.githooks -- see agent-constraints/session-lifecycle.md
+
+git_dir=$(git rev-parse --absolute-git-dir) || exit 0
+
+if ! sh "$(git rev-parse --show-toplevel)/.githooks/conflict-scan.sh"; then
+  echo "" >&2
+  echo "  pre-merge-commit rejected this merge. Resolve the file(s) above and" >&2
+  echo "  commit the merge yourself; do NOT reach for --no-verify." >&2
+  echo "" >&2
+  exit 1
+fi
+
+exit 0
