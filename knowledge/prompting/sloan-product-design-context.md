@@ -20,7 +20,7 @@ rebuild something that was deliberately rejected.
 - **Distil it to skill-sized, signal-over-noise, then eval it** — the same
   context-engineering discipline we apply to code context. Don't dump a whole design
   system into context; shrink it and confirm with evals that it helps rather than
-  overwhelms. (Extends the adopted "lean grounding map" + "skills ship with evals".)
+  overwhelms. (Extends the adopted "token efficiency" + "skills ship with evals".)
 - **Make it a maintained, owned connection** — code↔design/product sync needs a
   dedicated owner and will never be perfectly in sync; accept some drift deliberately.
 - **Bidirectional, not just code-ward**: flow technical-effort / tech-debt context

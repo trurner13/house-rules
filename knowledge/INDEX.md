@@ -5,7 +5,7 @@ All distilled best-practice notes, by topic. The universal ones are lifted into
 London, June 2026** (31 talks via the Tessl registry) plus ongoing notes.
 
 ## Prompting & context
-- [context-engineering-and-memory](prompting/context-engineering-and-memory.md) — the CLAUDE.md → memory tools → Skills → filesystem → "dreaming" progression, and the four production principles (versioning, concurrency, permissioning, portability).
+- [context-engineering-and-memory](prompting/context-engineering-and-memory.md) — the CLAUDE.md → memory tools → Skills → filesystem → "dreaming" progression, and the four production principles (versioning, concurrency, permissioning, portability); plus the token-efficiency habits and why private agent memory is switched off.
 - [interaction-style](prompting/interaction-style.md) — standing preferences for how any AI works with us: no sycophancy, clarify vague prompts.
 - [sloan-product-design-context](prompting/sloan-product-design-context.md) — the context agents need lives in Figma/Linear/Notion; distil it to skill-sized, eval it, flow effort back to PMs.
 
@@ -49,6 +49,7 @@ London, June 2026** (31 talks via the Tessl registry) plus ongoing notes.
 - [maleix-collective-intelligence](ways-of-working/maleix-collective-intelligence.md) — turn agents' attributed mistakes into reusable team knowledge (three-act workflow).
 - [martinelli-spec-driven-development](ways-of-working/martinelli-spec-driven-development.md) — the AI Unified Process: keep use cases as the stable spec, regenerate code from them.
 - [measuring-ai-adoption](ways-of-working/measuring-ai-adoption.md) — the adopted metric: merge rate and zero-follow-up share; which vanity metrics to demote (three talks).
+- [parallel-by-default](ways-of-working/parallel-by-default.md) — split work and run it at once; serial needs a reason (shared files, output dependency, open decision); batch size capped by the gates.
 - [session-handover-and-work-state](ways-of-working/session-handover-and-work-state.md) — a session is not a unit of storage: checkpoint the branch, capture the intent, and make the *next* session's start the gate.
 - [stack-humans-architect-ai-writes-code](ways-of-working/stack-humans-architect-ai-writes-code.md) — humans own intent and constraints; agents write all code; five merge gates.
 - [syme-continuous-ai](ways-of-working/syme-continuous-ai.md) — Continuous AI as a third pillar beside CI/CD: recurring, sandboxed agent jobs that emit to one narrow safe channel.

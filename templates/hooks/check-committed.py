@@ -66,7 +66,6 @@ MUST_SHIP_FILES = [
     ".vscode/settings.json", ".vscode/extensions.json", ".vscode/launch.json",
     ".vscode/tasks.json",
     # how it builds and ships
-    "Dockerfile", "docker-compose.yml", "docker-compose.yaml", "compose.yaml",
     "Makefile", "justfile", ".gitlab-ci.yml", "Jenkinsfile",
     # intent, not just code -- code without the why is a rewrite, not a handover
     "SPEC.md", "CLAUDE.md", "AGENTS.md",

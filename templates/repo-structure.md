@@ -7,9 +7,16 @@ June 2026.
 ## Recommended layout
 
 ```
-<repo>/
+<repo>/                            # lowercase-with-hyphens: <product>-<part>
+├── README.md                      # for a HUMAN with no AI tool: what, setup, run, test, deploy
 ├── CLAUDE.md                      # lean entry point — repo nuance only
 │                                  #   (copy templates/new-repo-CLAUDE.md; guardrails auto-load from .claude/rules/)
+├── SPEC.md                        # the approved spec — the durable source of truth
+├── <code folder>/                 # src/, app/, the Python package… — whatever the framework expects;
+│                                  #   the README names it
+├── docs/                          # every other document: briefs, plans, reference PDFs
+├── scripts/                       # build/deploy/setup scripts — each runnable by hand
+├── tests/
 ├── .claude/
 │   ├── rules/                     # modular rules, one topic per file (all auto-loaded)
 │   │   ├── 00-guardrails.md       #   VENDORED shared rules — synced from TRT-AI-guardrails (don't hand-edit)
@@ -22,11 +29,13 @@ June 2026.
 │   │       └── evals/             #   trigger/behaviour evals
 │   ├── agents/
 │   │   └── <name>.md              # custom subagents — a single .md file; identity from the `name:` frontmatter
-│   ├── settings.json              # team settings: permissions, hooks, env  → COMMIT
+│   ├── settings.json              # team settings: permissions, hooks, env,  → COMMIT
+│   │                              #   "autoMemoryEnabled": false
 │   ├── settings.local.json        # personal / machine overrides            → GITIGNORE
 │   ├── hooks/                     # hook scripts referenced by settings.json → COMMIT
 │   │   └── session-start.ps1      #   prints the work-state digest into context
 │   └── worktrees/                 # per-session isolated checkouts           → GITIGNORE
+│       └── <issue-id>/            #   the ONLY place worktrees live; removed once the branch merges
 ├── .githooks/                     # VERSIONED git hooks                      → COMMIT
 │   ├── commit-msg                 #   rejects a checkpoint with no Next-Step: trailer
 │   └── pre-commit                 #   refuses to commit over an unresolved conflict
@@ -45,7 +54,7 @@ June 2026.
 ## Principles (each ties to an adopted rule)
 
 - **Lean `CLAUDE.md`** — it loads every session, so keep it small (a map, not a
-  dump); push detail into `.claude/rules/` or `.claude/skills/`. *(adopted: lean grounding map)*
+  dump); push detail into `.claude/rules/` or `.claude/skills/`. *(adopted: token efficiency)*
 - **Path-scoped rules** — a file in `.claude/rules/` with `paths:` frontmatter
   (globs) loads **only** when Claude touches matching files → saves context. Rules
   without `paths:` load every session.
@@ -61,12 +70,16 @@ June 2026.
   the status and transition log for *every* open issue, not just the one being worked.
   It is the on-disk state that lets the triage→merge flow survive a new session.
   *(adopted: one issue, one file — see [agent-constraints/issue-tracker.md](agent-constraints/issue-tracker.md))*
-- **Worktrees are gitignored and short-named** — Claude Code creates them under
-  `.claude/worktrees/<name>/`; name them after the issue id so `--worktree <id>` reopens
-  the existing one instead of creating a rival. Gitignoring keeps them out of `git
-  status`; it does **not** protect them from `git clean -ffdx`, so never run that.
+- **Worktrees are hidden, gitignored, short-named and self-cleaning** — Claude Code
+  creates them under `.claude/worktrees/<name>/`; name them after the issue id so
+  `--worktree <id>` reopens the existing one instead of creating a rival. **Never create
+  them as folders beside the repo** (`<repo>.wt-<task>`): that is how one machine ended
+  up with ~30 of them and nobody could tell live work from finished. Once a worktree's
+  branch merges, remove it (without `--force`). Gitignoring keeps them out of `git
+  status`; it does **not** protect them from `git clean -ffdx`, so never run that. Tell
+  test runners and linters to skip the folder — Vitest and Jest don't by default.
   `.worktreeinclude` carries `.env`-style gitignored files into each new worktree.
-  *(adopted: isolated environment per agent — see [agent-constraints/session-lifecycle.md](agent-constraints/session-lifecycle.md))*
+  *(adopted: parallelise by default, isolated environment per agent — see [agent-constraints/session-lifecycle.md](agent-constraints/session-lifecycle.md))*
 - **Hooks for hard guarantees** — anything that MUST happen every time goes in a
   hook (in `settings.json`), not an advisory rule. *(adopted: deterministic guardrails)*
 - **Git hooks are versioned, not hidden.** Put them in `.githooks/` and commit them;
@@ -80,7 +93,9 @@ June 2026.
   `.claude/rules/00-guardrails.md` (Claude Code auto-loads it). This is what makes the
   rules work on any machine with a plain clone — no `~` import, no global setup. Don't
   hand-edit the vendored copy; re-sync it (`scripts/sync-guardrails.ps1`) when rules
-  change. *(adopted: lean grounding map / single source of truth)*
+  change. *(adopted: token efficiency / single source of truth)*
+- **No private memory** — commit `"autoMemoryEnabled": false` in `.claude/settings.json`.
+  Anything worth remembering is a repo edit. *(adopted: durable knowledge lives in the repo)*
 - **Phase-split constraints** — keep the agent flow (triage → plan → adversarial
   review → implement) as separate files in `agent-constraints/`, alongside the two
   cross-cutting ones (`session-lifecycle.md`, `issue-tracker.md`); the lean `CLAUDE.md`
@@ -92,6 +107,60 @@ June 2026.
   blocks it when a human wants to step in.
 - **Dual output mode** — every command/endpoint supports a structured
   machine-readable (JSON) output mode alongside human output. *(adopted: logs are for the agent)*
+
+## Naming
+
+One convention, so any repo can be navigated without learning it first. *(adopted: name
+things one way)*
+
+| Thing | Convention | Example |
+|---|---|---|
+| Repo | `lowercase-with-hyphens`, `<product>-<part>`. The same name on GitHub and on disk. No capitals, underscores, version numbers or `2` suffixes | `acme-api`, `acme-admin-web` |
+| Root | Only the entry documents a person looks for first (`README.md`, `CLAUDE.md`, `SPEC.md`, and `LICENSE`/`CHANGELOG.md` where used) plus tool config and lock files | — |
+| Shared folders | `docs/`, `scripts/`, `tests/`, `issues/`, `.claude/`, `.github/`, `.githooks/`, `agent-constraints/` | — |
+| Code folder | Whatever the framework expects; the README says which | `src/`, `app/`, `<package>/` |
+| Branch | `<type>/<issue-id>-<slug>`, type one of `feat`, `fix`, `docs`, `chore`, `spike` | `fix/2026-09-15-a3f1-consent-banner` |
+| Worktree | `.claude/worktrees/<issue-id>` | `.claude/worktrees/2026-09-15-a3f1` |
+| Issue file | `issues/<YYYY-MM-DD-xxxx>.md` — see [issue-tracker](agent-constraints/issue-tracker.md) | `issues/2026-09-15-a3f1.md` |
+| Docs and scripts | `kebab-case` | `deploy-app.ps1`, `docs/checkout-spec.md` |
+| Code files | The language's own convention | `OrderService.cs`, `order_service.py` |
+
+- **Nothing loose at the root.** Briefs, specs, PDFs and Word documents go in `docs/`.
+  Large binaries follow the ignored-loudly rule below. Temporary output goes in a
+  gitignored folder or nowhere: a root full of `tmp*` folders, zips and exports hides the
+  files that matter. (One real repo had ~70 leftover agent temp folders at its root.)
+- **Claude Code's own worktree branch is `worktree-<name>`**, which breaks the branch
+  convention. Create the branch with the right name first, or rename it before pushing.
+- **Renaming an existing repo is a tracked issue, done when it is next worked on.**
+  Not a sweep: a rename breaks more than it looks like it should. The checklist:
+  1. Close every worktree.
+  2. Rename on GitHub, which redirects the old URL but should not be relied on, and
+     update each clone's remote.
+  3. Rename the local folder.
+  4. Fix CI, deploy and infrastructure references to the old name.
+  5. Fix links from other repos, including vendored guardrail links.
+  6. Accept that past Claude sessions are keyed to the old folder path and won't follow.
+
+## Usable by a human
+
+AI-first means agents *write* the code. It does not mean only agents can *use* it. A repo
+that only works when Claude drives it has a single point of failure and can't be handed
+over. *(adopted: usable by a human without Claude)*
+
+- **The README is for a person with no AI tool.** What the repo is and who it's for;
+  how to set it up, run it, test it and deploy it, as commands to copy and paste; the
+  "What this clone can't give you" section. `CLAUDE.md` is for the agent and doesn't
+  count.
+- **Every script runs by hand.** `scripts/` entries take arguments and print usage; none
+  assumes an agent is the caller.
+- **Nothing a human needs lives only in agent machinery.** If a skill, hook or subagent
+  does real work, the README says what it does and how to do the same thing without
+  Claude, or the script it wraps can be run directly.
+- **Agent-readable is not human-unreadable.** Structured logs with error codes and
+  runbook links (the logging rule) serve both. The rule is against output only a
+  machine can follow, not against structure.
+- **The test** pairs with the fresh-clone test below: someone who has never seen the
+  project clones it and gets it running from the README alone.
 
 ## What must be committed, what may be ignored
 
@@ -124,8 +193,8 @@ These are the ones that actually go missing:
   `.python-version`, `.editorconfig`, and the project-level `.vscode/settings.json` /
   `extensions.json` / `launch.json`. Ignore `.vscode/*` and re-include those three;
   never blanket-ignore the folder.
-- **CI, container and infrastructure config** — workflows, `Dockerfile`, compose files,
-  IaC. If the pipeline can't be rebuilt from the clone, it isn't handed over.
+- **CI, build and infrastructure config** — workflows, build and deploy scripts, IaC.
+  If the pipeline can't be rebuilt from the clone, it isn't handed over.
 - **Migrations and seed data.** A schema nobody can rebuild is not a deliverable.
 - **Test fixtures, golden files and small runtime assets** — routinely killed by a
   blanket `data/`, `fixtures/`, `assets/`, `*.csv` or `*.json` ignore.

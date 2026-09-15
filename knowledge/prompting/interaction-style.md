@@ -30,6 +30,13 @@ toward asking.)
 most likely and why, and ask the user to pick — rather than silently choosing.
 If the intent is obvious from context, just proceed (don't ask needless questions).
 
+**Ask as multiple choice, with a recommendation.** When several decisions are
+pending, batch them into structured options and put the recommended one first, saying
+why. A batch of concrete choices gets answered far faster than open-ended questions,
+and leading with a recommendation is wanted, not presumptuous. (Stated 2026-08-12. It
+lived only in one machine's private agent memory until 2026-09-15; moved here under
+the "durable knowledge lives in the repo" rule.)
+
 ## 3. Plain English, laymen's terms
 **Principle:** Talk to the user in everyday language. Explain what changed and
 why it matters to the goal — not how it is implemented.

@@ -15,7 +15,7 @@ and **performance** walkthroughs of the running app, docs upkeep, dependency hyg
 
 ## Run them safely (non-negotiable — "always have a security architecture")
 
-- **Read-only, no secret access, sandboxed**: run in a container, firewalled network,
+- **Read-only, no secret access, sandboxed**: run in a sandbox (never Docker), firewalled network,
   no shared caches.
 - **Plan / apply split with threat detection between**: the agent step produces output
   to a *narrow channel*; a separate, non-agentic stage applies it, with threat

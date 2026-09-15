@@ -11,7 +11,7 @@
   3. *Task-scaling vs org-scaling* — spin up capacity per task (e.g. Kanban cards that each launch a desktop), not per role; or use a coarse-role + task-scaling hybrid.
   4. *Spec-driven development* — split every job into a **plan phase** then an **implement phase**, with human review of the spec in between.
   5. *Mobile / multiplayer* — support multiplayer human-in-the-loop spec review and in-browser QA, accessible anywhere.
-  6. *Dev-environment bootstrap speed* — make per-agent environments near-instant (Marsden uses ZFS-cloned Docker-in-Docker envs so each desktop is a cheap clone).
+  6. *Dev-environment bootstrap speed* — make per-agent environments near-instant (Marsden clones each desktop cheaply from a prepared filesystem snapshot; for us, a git worktree per agent is the cheap, near-instant copy).
   7. *Token-cost / model strategy* — mix local models (e.g. Llama 3.1) with frontier models (e.g. Claude Opus) to control cost.
 - **Give each agent a real, GPU-accelerated streaming Linux desktop** so it has the same tools a human dev would, and humans can drop in to observe or take over.
 - **Audit yourself dimension by dimension:** for each, mark covered / partial / missing and close the gaps.

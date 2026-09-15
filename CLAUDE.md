@@ -75,4 +75,5 @@ Deliberate departures, with reasons:
   Recorded 2026-08-12.
 - **Standard `.claude/` structure — N/A as the source:** this repo *is* the source of
   the rules, so it doesn't vendor a copy of itself; it has this `CLAUDE.md` + `SPEC.md`
-  instead of the consumer layout.
+  instead of the consumer layout. The one piece it does carry is `.claude/settings.json`
+  with `autoMemoryEnabled: false`, so private agent memory is off here as the rules require.

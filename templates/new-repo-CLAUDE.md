@@ -24,7 +24,8 @@ Humans architect, design, and review; AI writes the code. No hand-written produc
 - **Layout:** <key directories and what lives where>
 - **How we work here:** follow the phase flow in [`agent-constraints/`](agent-constraints/README.md) — triage → plan → adversarial review → implement → verify/gate → merge. **First moves on a new repo:** make sure the fundamentals exist (CI + a way to ship + tests + lint), then work **spec-first** (write/approve a `SPEC.md` before building).
 - **Every session:** start by reconciling in-flight work and reading [`issues/`](agent-constraints/issue-tracker.md) — resume what exists rather than opening a rival branch or worktree; capture anything you notice as its own issue before moving on; checkpoint the branch every turn and leave nothing uncommitted at the end ([`session-lifecycle`](agent-constraints/session-lifecycle.md)).
-- **Conventions:** <non-default rules — e.g. naming, error format, no `any`>
+- **Conventions:** naming and layout follow the shared standard (lowercase-hyphen names, `<type>/<issue-id>-<slug>` branches, nothing loose at the root); worktrees only in `.claude/worktrees/<issue-id>`. <add non-default rules — e.g. error format, no `any`>
+- **Humans use this repo too:** keep `README.md` runnable by a person with no AI tool — setup, run, test, deploy as plain commands. Anything worth remembering goes in this repo, never in private agent memory.
 - **Protected / careful:** <e.g. `.env`, migrations, anything irreversible>
 
 ## Repo-specific nuance & overrides

@@ -81,6 +81,13 @@ One live branch per issue; the issue records the branch in its `branch:` field. 
 the cheapest fix available for "the new session made its own worktree" — it costs a
 naming convention, not a hook.
 
+**Only there — never beside the repo.** A `git worktree add ../<repo>.wt-<task>` puts the
+copy next to the repo, where it is visible to every human browsing the folder, invisible
+to `--worktree` reopening, and easy to forget. One working machine had built up ~30 of
+them by 2026-09-15. Parallel work is the default
+([parallel-by-default](../../knowledge/ways-of-working/parallel-by-default.md)), so this
+location has to stay legible.
+
 ## During — checkpoint at every turn, not at the end
 
 **Do not rely on the exit.** A session-end hook cannot block, gets a 1.5-second budget
@@ -153,6 +160,18 @@ checkpoint missed something**, not an obstacle to force past. Investigate it; ne
 add `--force`. On Windows a single open file handle makes `worktree remove --force`
 exit **255 after** deleting the `.git` pointer, the admin directory and every unlocked
 file — so a non-zero exit there does **not** mean nothing happened.
+
+### Self-cleaning: remove worktrees whose branch has merged
+
+Because the exit is best-effort, cleanup can't depend on it. The next session's start
+does it instead. For each worktree under `.claude/worktrees/`:
+
+- its branch is merged into the default branch;
+- `git status --porcelain` is empty;
+- nothing is unpushed.
+
+When all three hold, remove it (no `--force`) and say so in the digest. Anything else is
+listed, not touched: unmerged or dirty means someone's work is in it.
 
 ## Never
 

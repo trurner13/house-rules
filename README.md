@@ -14,7 +14,7 @@ must hold gets an executable check behind it.
 
 | | |
 |---|---|
-| [`rules/RULES.md`](rules/RULES.md) | The 54 rules themselves. One or two lines each, every one linking to the note behind it. This is the file that gets vendored. |
+| [`rules/RULES.md`](rules/RULES.md) | The 57 rules themselves. One or two lines each, every one linking to the note behind it. This is the file that gets vendored. |
 | [`templates/hooks/`](templates/hooks/) | The enforcement. Dependency-free Python, shell and PowerShell: a completeness gate that asks whether a fresh clone would actually work, a tracker well-formedness gate, commit-message and pre-commit hooks. |
 | [`knowledge/`](knowledge/INDEX.md) | The reasoning behind the rules, one idea per file. Read on demand, deliberately kept out of the always-on rules file so it does not cost context in every session. |
 | [`templates/agent-constraints/`](templates/agent-constraints/README.md) | The operational conventions: planning, triage, verification and gates, issue tracking, session lifecycle, adversarial review dimensions. |
@@ -61,5 +61,5 @@ not mine to republish. Where a rule came from a real failure, the failure is
 described and the repo it happened in is not.
 
 One rule in `RULES.md` is marked *(aspirational)*: intended, not yet enforced.
-It is labelled rather than quietly listed with the other 53, because a rules file
+It is labelled rather than quietly listed with the other 56, because a rules file
 that blurs the two is not trustworthy about any of them.

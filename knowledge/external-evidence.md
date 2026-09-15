@@ -123,8 +123,8 @@ Step… Is Encoding What You Already Know* (02 Jun).
   deterministic topological sort — no LLM at run time, so re-runs are repeatable and
   free. (Directly applicable to a scheduled bot.)
 - **Isolation:** per-task git worktrees (`.claude/worktrees/`, gitignored; lifecycle
-  skill passes `--repo-dir` back to the parent) **and** execution drivers (host/Docker/
-  custom) so one method can't read another's output.
+  skill passes `--repo-dir` back to the parent) **and** separate execution drivers, so
+  one method can't read another's output.
 - **Model tiering:** Opus for adversarial/security/general review; Sonnet for UX.
 - **Economics (from *Your Agent Is Starving*):** 5 devs, **zero hand-written code**,
   **~$3k/month** = ~$1k Claude Max Pro licences + ~$2k CI (4 reviews/PR + adversarial +
