@@ -3,7 +3,7 @@
 What happens at the **boundaries** of an agent session — before the first change,
 at every turn, and at the exit. This is the file that stops work being lost between
 sessions. Adapt per repo; the depth and reasoning are in
-[session-handover-and-work-state](https://github.com/trurner13/TRT-AI-guardrails/blob/main/knowledge/ways-of-working/session-handover-and-work-state.md).
+[session-handover-and-work-state](../../knowledge/ways-of-working/session-handover-and-work-state.md).
 
 The rule underneath all of it: **a session is not a unit of storage.** Anything that
 matters must be on a branch, on the remote, or in the issue tracker before the turn
@@ -147,8 +147,12 @@ happen is a red checkpoint being *merged*.
 Add another `wip(...)` commit, or `git commit --fixup=<sha>` and autosquash while it is
 still local. **Never `--amend` a checkpoint**: `--amend -m` silently drops the
 trailers, turning a discoverable checkpoint into an invisible one, and amending is
-unsafe once pushed. Squash-on-merge collapses the whole chain at PR time, which is what
-makes committing WIP to a feature branch harmless.
+unsafe once pushed. The branch is merged with a merge commit, never squashed (squash
+strips the `Co-Authored-By:` and `Config-Reviewed-By:` trailers that are the attribution
+record; see the rule "Agents commit under their own identity"). The `wip(...)` chain
+therefore stays in history, which is harmless: each commit says what it is, and the
+merge commit carries the summary. *(Changed 2026-10-12; this paragraph used to rely on
+squash-on-merge.)*
 
 ## End — best-effort, and label it that way
 
@@ -157,7 +161,10 @@ remove` **without `--force`**.
 
 A refusal (`contains modified or untracked files`) is **a correctness signal that the
 checkpoint missed something**, not an obstacle to force past. Investigate it; never
-add `--force`. On Windows a single open file handle makes `worktree remove --force`
+add `--force` at the exit. The one sanctioned use of `remove --force` is at the *next*
+session's start, on a dirty leftover of your own that the harness kept, after reading what
+is in it and committing anything worth keeping — never on a worktree another session
+created (the rule "Isolated environment per agent", amended 2026-10-12). On Windows a single open file handle makes `worktree remove --force`
 exit **255 after** deleting the `.git` pointer, the admin directory and every unlocked
 file — so a non-zero exit there does **not** mean nothing happened.
 
@@ -181,7 +188,7 @@ listed, not touched: unmerged or dirty means someone's work is in it.
 | `git commit --no-verify` | disables `commit-msg` too, so it kills the very hook that makes a checkpoint discoverable. Use a named escape hatch (`CHECKPOINT=1`) instead |
 | `git worktree add --force` | two worktrees on one branch; the second one's stale index turns a later commit into a **silent revert** of the first one's work |
 | `git worktree add --detach` | commits become unreachable the instant the worktree is removed, taking its reflog with them. Recoverable as a dangling commit via `git fsck --lost-found` — complete with tree and filenames — but only until `gc` prunes it |
-| `git worktree remove --force` | deletes untracked *and* ignored files. Staged content survives as an anonymous dangling blob (`git fsck --lost-found`, time-limited); unstaged and untracked content is simply gone |
+| `git worktree remove --force` on another session's worktree | deletes untracked *and* ignored files. Staged content survives as an anonymous dangling blob (`git fsck --lost-found`, time-limited); unstaged and untracked content is simply gone. On your *own* dirty leftover, only after inspecting it (see "End") |
 | bare `git worktree prune` | deletes the admin dir of a temporarily-unreachable worktree, and **`git worktree repair` cannot undo it**. Run `-n -v` first, never while a path is offline |
 | `git clean -ffdx` | deletes a nested worktree outright. Gitignoring it silences `git status` and provides **no** protection |
 | `git stash` as a handover | one global stack shared across every worktree; another session can pop and drop yours onto the wrong branch. It also leaves untracked and ignored files in place, so the tree only *looks* saved |
@@ -198,7 +205,7 @@ Hook facts verified against the Claude Code docs and a local **v2.1.220** instal
 | Refuse a malformed checkpoint | `commit-msg` (plain git) | **Yes**, absolutely — and it has no override, works for human commits, and needs no Claude Code version |
 | Allow a red gate for a checkpoint only | `pre-commit` reading `CHECKPOINT=1` | **Yes.** Strictly better than `--no-verify` |
 | Reconcile before a workspace is created | `WorktreeCreate` | **Yes** — "any non-zero exit code causes worktree creation to fail". Only fires for Claude Code's own worktree feature, so pair it with a `PreToolUse` matcher for raw `git worktree add` on **every** command-running tool — `Bash`, `PowerShell` and `Monitor`. A matcher covering one shell is a hole, not a gate |
-| Close the workspace | `SessionEnd`, `WorktreeRemove` | **No.** Output discarded, 1.5s default budget (raisable to 60s per-hook). Backstop only |
+| Close the workspace | `SessionEnd`, `WorktreeRemove` | **No.** Output discarded, 1.5s default budget (raisable to 60s per-hook). Backstop only. The kit's `session-end.ps1` is an **opt-in** use of it: wired by hand (the block is in the script's header), it copies the transcript, unencrypted and never purged, to `~/.claude/session-archive/<repo>/` (10 s timeout), because Claude Code deletes transcripts after `cleanupPeriodDays`; `settings.json` sets that to 3650 as the backstop for the sessions the hook misses |
 
 Two honest limits, both of which must be stated wherever this is adopted:
 

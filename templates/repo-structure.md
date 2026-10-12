@@ -19,7 +19,7 @@ June 2026.
 ├── tests/
 ├── .claude/
 │   ├── rules/                     # modular rules, one topic per file (all auto-loaded)
-│   │   ├── 00-guardrails.md       #   VENDORED shared rules — synced from TRT-AI-guardrails (don't hand-edit)
+│   │   ├── 00-guardrails.md       #   VENDORED shared rules — synced from house-rules (don't hand-edit)
 │   │   ├── <topic>.md             #   always-on (no frontmatter)
 │   │   └── <area>.md              #   path-scoped: YAML `paths:` globs → loads only when matching files are touched
 │   ├── skills/
@@ -96,6 +96,35 @@ June 2026.
   change. *(adopted: token efficiency / single source of truth)*
 - **No private memory** — commit `"autoMemoryEnabled": false` in `.claude/settings.json`.
   Anything worth remembering is a repo edit. *(adopted: durable knowledge lives in the repo)*
+- **Sessions are kept** — the same file sets `"cleanupPeriodDays": 3650`; a repo that opts
+  in also wires the `SessionEnd` hook (`session-end.ps1`, off by default) that copies each
+  transcript to `~/.claude/session-archive/<repo>/`. Without the setting, Claude Code deletes
+  transcripts after 30 days. *(adopted: retain all sessions)*
+- **Hook timeouts are generous and output is streamed** — on timeout Claude Code discards
+  *everything* a hook printed, so the digest hook has 120 s (the platform default is 600 s)
+  and prints most-important-first. Never set `"attribution": false` in a committed settings
+  file: a Claude Code older than 2.1.281 then ignores the *whole* file, guard keys and hooks
+  included; use the object form if a custom trailer is wanted. `permissions.defaultMode`
+  cannot be set to `auto` or `bypassPermissions` from a project file (since 2.1.257), which is
+  the safety property a committed file relies on.
+- **Executable configuration is reviewed as code, whoever wrote it** — `.claude/**`,
+  `.mcp.json`, `.githooks/**`, workflows, lockfiles and the instruction files land only with a
+  `Config-Reviewed-By:` trailer (enforced by `commit-msg` and `pre-merge-commit`; the path list
+  is `config-review-scan.sh`). Read those files in a **fresh clone before opening it** in an
+  agent: the SessionStart hook runs the moment it opens, which is how the Miasma worm spread
+  (June 2026). See [verification-and-gates](agent-constraints/verification-and-gates.md).
+- **Worktree names, two caveats** — since Claude Code 2.1.208 reopening a *clean* named
+  worktree that has no commits of its own resets it to the default branch, so "name it after
+  the issue to reopen it" holds only once the worktree has a commit; and `--worktree "#1234"`
+  reserves the name `pr-1234`. A subagent working in a worktree does not load that worktree's
+  `CLAUDE.md` or `.claude/rules/`.
+- **`AGENTS.md`** — Claude Code reads it only when no `CLAUDE.md` exists (2.1.277). A repo that
+  wants both keeps `CLAUDE.md` and `@`-imports the shared file; otherwise one of them is ignored.
+  Re-examined on these facts 2026-10-12: the August decision stands — `CLAUDE.md` only, because
+  all AI-first work here runs on Claude Code. Revisit when a second tool is actually in use.
+- **Skills run no shell on load** — commit `"disableSkillShellExecution": true` in the same
+  file: a skill's `!` commands otherwise run before the model ever reads the skill.
+  *(adopted: vet skills like untrusted dependencies)*
 - **Phase-split constraints** — keep the agent flow (triage → plan → adversarial
   review → implement) as separate files in `agent-constraints/`, alongside the two
   cross-cutting ones (`session-lifecycle.md`, `issue-tracker.md`); the lean `CLAUDE.md`
@@ -284,6 +313,28 @@ The same shape applies to `.vscode/*` + `!.vscode/settings.json`, and to `.env*`
   a real config file, a fixture set or a checked-in build the moment your project's
   layout differs.
 
+### Never hard-code a branch or a worktree
+
+A worktree is usually named after its branch (`C:\<repo>-wt-<branch>`,
+`.claude/worktrees/<name>`), and agents write the absolute path they are standing in.
+Every such path is a time bomb: the branch merges, the worktree is removed, and every
+script, launcher and default that named it stops working — or, worse, keeps reading a
+stale copy that someone forgot to delete. In one repo, over a hundred scripts hard-coded
+one worktree and three more pointed at older ones.
+
+- **Derive the root from the file's own location.** Python
+  `Path(__file__).resolve().parents[n]`; PowerShell `$PSScriptRoot`; cmd `%~dp0`; shell
+  `$(dirname "$0")`. Data locations come from the repo (committed) or from config/env
+  with a repo-relative default — never from a machine path.
+- **Comments too.** A launch hint in a comment gets copy-pasted; write `<repo>`.
+- **Code never branches on a branch.** Product code and tests never name a branch.
+- **Records are exempt.** A handover, decision page or log may say where a file *was*
+  when it was written — that is history, not a dependency.
+- **Enforce it.** A test walks the tracked runnable files (code, launchers, config) and
+  fails on any path into a worktree (`-wt-` folders, `worktrees/`), and on a branch name
+  in product code. A `tests/test_no_worktree_paths.py` that walks tracked runnable files is
+  the reference shape.
+
 ### Verify with git, not by reading
 
 The `.gitignore` text is not the answer: negations, nested ignore files, precedence and
@@ -358,3 +409,5 @@ wholesale, which is worse than one that never runs.
 3. Add more `.claude/rules/` and `.claude/skills/` as the repo grows (path-scope where you can).
 4. Commit `.claude/settings.json`; gitignore `.claude/settings.local.json` + `CLAUDE.local.md`.
 5. Verify with `/memory` (`00-guardrails.md` loaded) and `/doctor`.
+6. On every fresh clone of any repo, read `.claude/`, `.mcp.json` and `.githooks/` **before**
+   opening it in an agent: the SessionStart hook runs on open.

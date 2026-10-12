@@ -32,7 +32,7 @@ cloud/CI runner. The repo's root `CLAUDE.md` then only declares AI-first + repo 
 # <Repo name>
 
 <!-- Shared AI guardrails are vendored at .claude/rules/00-guardrails.md and load
-     automatically every session. Re-sync from TRT-AI-guardrails when rules change. -->
+     automatically every session. Re-sync from house-rules when rules change. -->
 
 ## This repo (AI-first)
 Humans architect, design, and review; AI writes the code. No hand-written production code.
@@ -112,9 +112,12 @@ It installs:
 |---|---|---|
 | The adopted rules | `.claude/rules/00-guardrails.md` | Auto-loaded by Claude Code every session |
 | Phase + cross-cutting conventions | `agent-constraints/*.md` | The operational "how", for the repo to adapt |
-| Session-start digest | `.claude/hooks/session-start.ps1` | Prints open issues and in-flight work into the agent's context |
-| Hook wiring | `.claude/settings.json` | Fires the digest on `SessionStart` |
+| Session-start digest | `.claude/hooks/session-start.ps1` | Prints open issues, in-flight work, rules on trial and branches ahead of main into the agent's context |
+| Session-end archive (opt-in) | `.claude/hooks/session-end.ps1` | Laid down but not wired: when a repo adds the `SessionEnd` block from the script's header to `settings.json`, each transcript is copied to `~/.claude/session-archive/<repo>/` in the user's home folder. Off by default; it stores everything the agent read and ran, unencrypted, with no purge |
+| Hook wiring | `.claude/settings.json` | Fires the digest on `SessionStart`; sets `cleanupPeriodDays: 3650` and `disableSkillShellExecution: true` |
 | Checkpoint format gate | `.githooks/commit-msg` | Rejects a `wip(...)` commit with no `Next-Step:` trailer |
+| Config-review gate | `.githooks/commit-msg` + `.githooks/config-review-scan.sh` | Rejects a commit touching hooks, agent settings, MCP lists, workflows or lockfiles unless it carries a `Config-Reviewed-By:` trailer |
+| Merge gate | `.githooks/pre-merge-commit` | Refuses an automatic merge that commits conflict markers or brings in config-scan hits |
 | Conflict gate | `.githooks/pre-commit` | Refuses to commit over an unresolved conflict or staged conflict markers |
 | Completeness gate | `scripts/check-committed.py` | Fails if a fresh clone would be missing files someone ignored |
 | The issue tracker | `issues/` + `issues/archive/` | One file per issue — status, next step, history |
@@ -229,16 +232,13 @@ being asked.
 gh repo create <your-org>/<project> --private --source C:/<project> --remote origin --push
 ```
 
-**New repos are owned by your `gh` account's org** — that's where
-the current repos live. Note that some older repos, *including this guardrails repo
-itself*, are still under `trurner13`; that's why the vendored deep-dive links point
-there. Don't "correct" those to the org unless the repo is actually transferred —
-they would all 404 the moment you did.
+**New repos are owned by your `gh` account's org.** The vendored deep-dive links
+point at this public repo, so they resolve from any clone.
 
 ### What now runs by itself, and what doesn't
 
-**Runs automatically:** the session-start digest (every new session), and both git hooks
-(every commit).
+**Runs automatically:** the session-start digest (every new session), and the git hooks
+(every commit, and every merge git commits itself).
 
 **Does not run automatically:** the checkpoint commit itself. The agent is *told* what's
 outstanding and is *prevented* from committing it wrongly, but it still decides when to
@@ -282,24 +282,28 @@ takes precedence, so a repo can override a shared rule with a stated reason.
 
 ### Updating a repo you onboarded earlier
 
-Re-run the same command. Both forms leave your adapted files alone; the only file
-rewritten every time is the generated `.claude/rules/00-guardrails.md`:
+Re-run the same command. Both forms leave your adapted files alone. The generated
+`.claude/rules/00-guardrails.md` is rewritten every time, and so is any hook or check
+script the repo has **not** changed (a file that still equals some version the template
+once had is stale, not adapted, and is refreshed; anything you edited is left alone):
 
 - **`-Init`** — brings an older repo fully up to date: refreshed rules, any missing
   `agent-constraints/` file, **and** the hooks/tracker machinery it never had.
 - **without `-Init`** — the light touch: rules plus missing constraint files only. No
   hooks, no `issues/`, no git config changes.
 
-Either way, files the repo already has are left alone, so local adaptations survive.
-The script prints what it added and what it skipped.
+Either way, files you adapted survive. The script prints what it added, refreshed and
+skipped. Add `-DryRun` to see that list without writing anything. The script fetches
+first and refuses to sync from a checkout that is behind `origin/main` (stale rules would
+be reported as current); `-AllowStale` overrides that when you mean it.
 
 ### Hand this to Claude instead
 
 In a fresh repo, paste this prompt and let the AI do the above:
 
 ```
-This repo should follow my standing AI best practices, which live in the private
-repo trurner13/TRT-AI-guardrails. Clone it (gh repo clone) if you don't have it, then
+This repo should follow my standing AI best practices, which live in the
+repo <your-org>/house-rules. Clone it (gh repo clone) if you don't have it, then
 run its scripts/sync-guardrails.ps1 -Repo <this repo> -Init. That vendors the rules to
 .claude/rules/00-guardrails.md, copies the agent-constraints/ operational starter, and
 installs the machinery: the SessionStart digest hook, the commit-msg and pre-commit git
@@ -342,7 +346,7 @@ or run `sync-guardrails.ps1 -Repo <repo>` and commit.
 Have the AI compare the repo to the guardrails and produce a gap list. Paste:
 
 ```
-Read rules/RULES.md from the trurner13/TRT-AI-guardrails repo (clone it with
+Read rules/RULES.md from the <your-org>/house-rules repo (clone it with
 gh if needed). Then audit THIS repo against those rules. Produce a table:
 rule | does this repo follow it? (yes/partial/no) | evidence | what to change.
 Do not change any files yet — just give me the gap list, ordered by impact.
