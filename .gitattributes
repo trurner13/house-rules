@@ -10,3 +10,4 @@ templates/hooks/pre-commit text eol=lf
 templates/hooks/pre-merge-commit text eol=lf
 templates/hooks/conflict-scan.sh text eol=lf
 templates/hooks/test-commit-msg.sh text eol=lf
+templates/hooks/config-review-scan.sh text eol=lf
