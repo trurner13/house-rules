@@ -65,3 +65,20 @@ described and the repo it happened in is not.
 One rule in `RULES.md` is marked *(aspirational)*: intended, not yet enforced.
 It is labelled rather than quietly listed with the other 57, because a rules file
 that blurs the two is not trustworthy about any of them.
+
+## Licence
+
+Two licences, split by what the file is:
+
+- **The writing** — the rules, the plain-English companion, the notes in
+  `knowledge/`, the conventions in `templates/agent-constraints/` and every other
+  document — is under [Creative Commons Attribution 4.0 International](LICENSE)
+  (CC BY 4.0). Reuse it, adapt it, vendor it into your own repos; keep the
+  attribution.
+- **The code** — everything in `templates/hooks/` and `scripts/`, and any `.ps1`,
+  `.py`, `.sh` or `.mjs` file wherever it sits — is under the [MIT licence](LICENSE-CODE),
+  so it can go into a codebase under any licence without CC terms attaching to
+  the code around it.
+
+A lawyer has been asked to confirm this choice; until that comes back, treat
+the split as the intent rather than settled.
