@@ -1,23 +1,50 @@
 #!/bin/sh
-# Run the conflict scan on merges git commits ITSELF (a clean auto-merge).
+# Two checks on merges git commits ITSELF (a clean auto-merge).
 #
-# Why this exists: pre-commit does NOT run on an auto-merge -- git runs THIS
-# hook instead. That gap is not theoretical. On 2026-08-21 the runpod merge
+# Why this hook exists: pre-commit and commit-msg do NOT run on an auto-merge --
+# git runs THIS hook instead. That gap is not theoretical. On 2026-08-21 a merge in one onboarded repo
 # auto-resolved and committed <<<<<<< markers into .gitignore with pre-commit
-# already installed (ebcb875 stripped them out afterwards). "Auto-merged
-# cleanly" is a claim about git's ability to place hunks, never about whether
-# the result is coherent.
+# already installed (ebcb875 stripped them out afterwards). "Auto-merged cleanly"
+# is a claim about git's ability to place hunks, never about whether the result
+# is coherent.
+#
+# 1. The conflict scan (as pre-commit runs it).
+# 2. Executable configuration needs a human's name on it. commit-msg enforces the
+#    Config-Reviewed-By: trailer on ordinary commits, but an auto-merge writes its
+#    own message and never calls commit-msg, so a hook or MCP change could land by
+#    merge unseen. This hook refuses the auto-commit and leaves the merge in
+#    progress; the human reads the files and commits the merge with the trailer,
+#    which then passes through commit-msg like any other commit.
 #
 # Installed via core.hooksPath=.githooks -- see agent-constraints/session-lifecycle.md
 
-git_dir=$(git rev-parse --absolute-git-dir) || exit 0
+git rev-parse --absolute-git-dir >/dev/null 2>&1 || exit 0
+hooks_dir="$(git rev-parse --show-toplevel)/.githooks"
 
-if ! sh "$(git rev-parse --show-toplevel)/.githooks/conflict-scan.sh"; then
+if ! sh "$hooks_dir/conflict-scan.sh"; then
   echo "" >&2
   echo "  pre-merge-commit rejected this merge. Resolve the file(s) above and" >&2
   echo "  commit the merge yourself; do NOT reach for --no-verify." >&2
   echo "" >&2
   exit 1
+fi
+
+if [ -f "$hooks_dir/config-review-scan.sh" ]; then
+  hits=$(git diff --cached --name-only HEAD 2>/dev/null | sh "$hooks_dir/config-review-scan.sh")
+  if [ -n "$hits" ]; then
+    echo "" >&2
+    echo "pre-merge-commit REJECTED the automatic merge commit: it brings in changes to" >&2
+    echo "  executable configuration that no person has signed for reading." >&2
+    echo "" >&2
+    printf '%s\n' "$hits" | sed 's/^/    /' >&2
+    echo "" >&2
+    echo "  The merge is still in progress with the result staged. A human reads the" >&2
+    echo "  files above, then commits the merge with their name as a trailer:" >&2
+    echo "    git commit -m 'Merge ...' -m 'Config-Reviewed-By: Full Name <email>'" >&2
+    echo "  (or 'git merge --abort' to back out). Do NOT reach for --no-verify." >&2
+    echo "" >&2
+    exit 1
+  fi
 fi
 
 exit 0

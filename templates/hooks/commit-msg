@@ -1,34 +1,103 @@
 #!/bin/sh
-# Reject a checkpoint commit that omits the handover trailer.
+# Two gates on the commit message, both read the way git reads it.
 #
-# A wip(...) commit is a parked state that a LATER session has to pick up. The
-# Next-Step: trailer is the only thing that tells it where to resume, and it is
-# what `git for-each-ref --format='%(trailers:key=Next-Step,...)'` reads. A
-# checkpoint without it is invisible to the reconciliation pass.
+# 1. A change to executable configuration needs a human's name on it.
+#    Hooks, agent settings, MCP server lists, workflows and lockfiles run before
+#    anyone reads them (config-review-scan.sh names the paths and the two 2026
+#    attacks behind the list). A commit that touches them must carry
+#        Config-Reviewed-By: Full Name <email>
+#    as a trailer: the record that a person read those files, whoever wrote the
+#    change. This applies to every commit, fixup! and squash! included -- a fixup is
+#    folded into another commit and would carry its hook change in unseen.
+#
+# 2. A wip(...) checkpoint needs a Next-Step: trailer.
+#    It is a parked state that a LATER session has to pick up. The trailer is the
+#    only thing that tells it where to resume, and it is what
+#    `git for-each-ref --format='%(trailers:key=Next-Step,...)'` reads. A
+#    checkpoint without it is invisible to the reconciliation pass.
+#
+# Ask git, do not grep. A "Next-Step:" line that is not in the message's final
+# trailer block (say, a blank line between it and Co-Authored-By:) is body text
+# to git: the digest never shows it. Found 2026-10-04, when the old text check
+# passed exactly that. `git interpret-trailers --parse` reads the message the
+# way git does. --no-divider: without it a "---" line in the body is taken as
+# the start of a patch and hides the real trailer block, rejecting a good one.
 #
 # Installed via core.hooksPath=.githooks -- see agent-constraints/session-lifecycle.md
+# Tested by templates/hooks/test-commit-msg.sh.
 
 msg_file="$1"
-subject=$(head -n 1 "$msg_file")
+hooks_dir=$(cd "$(dirname "$0")" && pwd)
 
+# The subject as git will store it: an editor message may start with blank or comment
+# lines, which git strips AFTER this hook runs.
+subject=$(git stripspace --strip-comments < "$msg_file" | head -n 1)
+
+# If git cannot parse the message, fail closed: an unreadable message proves nothing.
+if ! trailers=$(git interpret-trailers --parse --no-divider "$msg_file" 2>/dev/null); then
+  echo "" >&2
+  echo "commit-msg REJECTED: git interpret-trailers could not read this message." >&2
+  echo "" >&2
+  exit 1
+fi
+trailers=$(printf '%s\n' "$trailers" | tr -d '\r')
+
+# --- gate 1: executable configuration ----------------------------------------------
+# The tests feed the staged list through COMMIT_MSG_STAGED_FILES so they do not depend
+# on whatever happens to be staged in the repo they run in.
+if [ -n "${COMMIT_MSG_STAGED_FILES+set}" ]; then
+  staged=$COMMIT_MSG_STAGED_FILES
+else
+  staged=$(git diff --cached --name-only 2>/dev/null)
+fi
+scan="$hooks_dir/config-review-scan.sh"
+if [ -f "$scan" ] && [ -n "$staged" ]; then
+  hits=$(printf '%s\n' "$staged" | sh "$scan")
+  if [ -n "$hits" ]; then
+    if ! printf '%s\n' "$trailers" | grep -qiE '^Config-Reviewed-By:[[:space:]]*[^[:space:]]'; then
+      echo "" >&2
+      echo "commit-msg REJECTED: this commit changes executable configuration and no" >&2
+      echo "  person has signed for reading it." >&2
+      echo "" >&2
+      printf '%s\n' "$hits" | sed 's/^/    /' >&2
+      echo "" >&2
+      echo "  These files run before anyone reads them (hooks, agent settings, MCP servers," >&2
+      echo "  workflows, lockfiles). Two 2026 supply-chain attacks (Miasma, Deadbugz) came in" >&2
+      echo "  through exactly these paths from trusted accounts. A human reads the change," >&2
+      echo "  then the commit carries their name as a trailer, in the LAST paragraph:" >&2
+      echo "    Config-Reviewed-By: Full Name <email>" >&2
+      echo "" >&2
+      echo "  An agent does not add this trailer on its own behalf. If you are an agent," >&2
+      echo "  stop and ask the owner to read the files above." >&2
+      echo "  Do NOT reach for --no-verify: it disables this hook AND pre-commit." >&2
+      echo "" >&2
+      exit 1
+    fi
+  fi
+fi
+
+# --- gate 2: checkpoints ------------------------------------------------------------
 # fixup!/squash! commits get squashed away before they reach anyone else.
 if printf '%s' "$subject" | grep -qE '^(fixup|squash)!'; then
   exit 0
 fi
 
-# Only checkpoints are governed by this hook.
+# Only checkpoints are governed by this gate.
 if ! printf '%s' "$subject" | grep -q '^wip('; then
   exit 0
 fi
 
-if ! grep -qE '^Next-Step:[[:space:]]*[^[:space:]]' "$msg_file"; then
+# A Next-Step trailer (key matched case-insensitively, as git does) with a non-empty value.
+if ! printf '%s\n' "$trailers" | grep -qiE '^Next-Step:[[:space:]]*[^[:space:]]'; then
   echo "" >&2
   echo "commit-msg REJECTED: a wip(...) checkpoint needs a 'Next-Step:' trailer." >&2
+  echo "  (One git reads as a trailer, with a value; a line in the body does not count.)" >&2
   echo "" >&2
   echo "  It is the handover. Without it the next session sees a parked branch" >&2
   echo "  and no idea what it was parked mid-way through." >&2
   echo "" >&2
-  echo "  Add a blank line, then a line such as:" >&2
+  echo "  Put it in the LAST paragraph of the message, with the other trailers" >&2
+  echo "  (Co-Authored-By: and the like) and no blank line between them:" >&2
   echo "    Next-Step: re-run the calibration suite against ADR-0035" >&2
   echo "" >&2
   echo "  Do NOT reach for --no-verify: it disables this hook AND pre-commit." >&2

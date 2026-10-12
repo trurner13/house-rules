@@ -21,7 +21,9 @@ When helping in this repo:
 - **Keep `rules/RULES.md` lean.** It is vendored into every repo as
   `.claude/rules/00-guardrails.md` (which Claude Code auto-loads), so it loads in
   *every* session of *every* repo. Each rule should be one or two lines and link
-  to the deeper `knowledge/` file for detail.
+  to the deeper `knowledge/` file for detail. Any rule added, renamed or removed there
+  also gets its entry in `rules/RULES-plain-english.md`; the lean check fails if the
+  two disagree.
 - **Write in plain English.** No code unless the practice itself is a snippet
   worth reusing.
 - **Don't proliferate files.** Before creating any new file or folder, check
@@ -76,4 +78,6 @@ Deliberate departures, with reasons:
 - **Standard `.claude/` structure — N/A as the source:** this repo *is* the source of
   the rules, so it doesn't vendor a copy of itself; it has this `CLAUDE.md` + `SPEC.md`
   instead of the consumer layout. The one piece it does carry is `.claude/settings.json`
-  with `autoMemoryEnabled: false`, so private agent memory is off here as the rules require.
+  with `autoMemoryEnabled: false`, `disableSkillShellExecution: true` and
+  `cleanupPeriodDays: 3650`, the three settings the rules ask every repo to commit; it
+  runs no hooks.

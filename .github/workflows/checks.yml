@@ -23,6 +23,8 @@ jobs:
         run: node scripts/check-links.mjs
       - name: RULES.md stays lean
         run: node scripts/check-rules-lean.mjs
+      - name: commit-msg hook reads trailers the way git does
+        run: sh templates/hooks/test-commit-msg.sh
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"

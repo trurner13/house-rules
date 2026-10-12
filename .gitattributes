@@ -1,2 +1,13 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Shell scripts MUST keep LF. With core.autocrlf=true these check out as CRLF, and a
+# "#!/bin/sh\r" shebang fails with "bad interpreter" on Linux, macOS and WSL2. Git for
+# Windows' bundled sh happens to tolerate it, so the breakage only appears when the repo
+# moves platform -- which is exactly when nobody is looking for it.
+templates/hooks/commit-msg text eol=lf
+templates/hooks/pre-commit text eol=lf
+templates/hooks/pre-merge-commit text eol=lf
+templates/hooks/conflict-scan.sh text eol=lf
+templates/hooks/test-commit-msg.sh text eol=lf
+templates/hooks/config-review-scan.sh text eol=lf

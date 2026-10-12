@@ -1,4 +1,4 @@
-# SPEC — TRT-AI-guardrails
+# SPEC — house-rules
 
 The one-page charter for this repo. (Yes, the guardrails repo has a spec now — it
 should practice the spec-first rule it preaches.) The detail lives in the files this

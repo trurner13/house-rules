@@ -60,6 +60,6 @@ framing as sound and specific figures as unverified.)*
 
 ## Sources
 
-- `transcripts/talks/dubnov-pm-writing-code-merge-rate.txt`
-- `transcripts/talks/thomas-ai-native-engineering.txt`
-- `transcripts/talks/bockeler-state-of-play-coding-assistants.txt`
+- When Our PM Started Writing Code (recording): https://www.youtube.com/watch?v=KzhjnILSP0Y
+- AI Native Engineering (recording): https://www.youtube.com/watch?v=NVzKtCSeoRA
+- State of Play: AI Coding Assistants (recording): https://www.youtube.com/watch?v=tFffUnSq7VA

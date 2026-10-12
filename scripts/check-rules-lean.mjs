@@ -27,6 +27,20 @@ if (starts.length > MAX_RULES) {
   violations.push(`too many rules (${starts.length} > ${MAX_RULES}) — prune or move detail to knowledge/`);
 }
 
+// The plain-English companion must cover exactly the same rules. Each of its entries
+// carries the rule's RULES.md title as (In RULES.md: "<title>"), so a rule added,
+// renamed or removed in RULES.md without updating the companion fails here.
+const PLAIN = "rules/RULES-plain-english.md";
+const titles = starts.map((i) => lines[i].match(/^- \*\*(.+?)\*\*/)[1].replace(/\.$/, ""));
+const plain = readFileSync(PLAIN, "utf8").replace(/\s+/g, " ");
+const tagged = [...plain.matchAll(/\(In RULES\.md: "(.+?)"\)(?= |$)/g)].map((m) => m[1]);
+for (const t of titles) {
+  if (!tagged.includes(t)) violations.push(`${PLAIN} is missing rule: "${t}" — add a plain-English entry tagged (In RULES.md: "${t}")`);
+}
+for (const t of tagged) {
+  if (!titles.includes(t)) violations.push(`${PLAIN} has an entry for a rule not in RULES.md: "${t}" — rename or remove it`);
+}
+
 console.log(`RULES.md: ${lines.length} lines, ${starts.length} rules.`);
 if (violations.length) {
   console.error("LEAN CHECK FAILED:");

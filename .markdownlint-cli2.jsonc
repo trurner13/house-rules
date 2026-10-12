@@ -17,7 +17,7 @@
   },
   // Lint the PROPAGATED / published surface — the entry docs, rules, and templates
   // that get vendored into other repos and must be clean. Internal working notes
-  // (discussion/, knowledge/, TODO.md) and scratch/transcripts are exempt.
+  // (knowledge/) are exempt.
   "globs": [
     "README.md", "CLAUDE.md", "CONTRIBUTING.md", "ADOPTION.md",
     "GETTING-STARTED.md", "SPEC.md", "rules/**/*.md", "templates/**/*.md"
