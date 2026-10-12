@@ -1,6 +1,6 @@
 // Internal-link gate: every relative markdown link in the curated docs must
-// resolve to a real file/dir. Deterministic, no network. Excludes transcripts/
-// and scratch. Run: node scripts/check-links.mjs   (exit 1 if any link is broken)
+// resolve to a real file/dir. Deterministic, no network. Excludes scratch
+// and tooling folders. Run: node scripts/check-links.mjs   (exit 1 if any link is broken)
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, dirname, resolve, relative } from "node:path";
 

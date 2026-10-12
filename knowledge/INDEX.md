@@ -53,3 +53,6 @@ London, June 2026** (31 talks via the Tessl registry) plus ongoing notes.
 - [session-handover-and-work-state](ways-of-working/session-handover-and-work-state.md) — a session is not a unit of storage: checkpoint the branch, capture the intent, and make the *next* session's start the gate.
 - [stack-humans-architect-ai-writes-code](ways-of-working/stack-humans-architect-ai-writes-code.md) — humans own intent and constraints; agents write all code; five merge gates.
 - [syme-continuous-ai](ways-of-working/syme-continuous-ai.md) — Continuous AI as a third pillar beside CI/CD: recurring, sandboxed agent jobs that emit to one narrow safe channel.
+
+## Research
+- [research-rules-still-current-2026-10](research-rules-still-current-2026-10.md) — the October 2026 research pass over every rule: per-rule verdicts against dated evidence (vendor changes, named incidents, studies), the findings that drove the amendments, and the actions decided.

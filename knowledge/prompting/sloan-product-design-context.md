@@ -31,4 +31,4 @@ rebuild something that was deliberately rejected.
 
 ## Source
 
-- `transcripts/talks/sloan-harness-engineering-beyond-code.txt`
+- Harness engineering beyond code - product & design constraints for agents (recording): https://www.youtube.com/watch?v=tf6VNGH3tRk

@@ -39,6 +39,6 @@ maintainer-controlled task menu, triage the backlog, and propose PRs.
 
 ## Source
 
-- `transcripts/talks/syme-agentic-repository-automation.txt`
+- The Agentic Repository Automation Revolution (recording): https://www.youtube.com/watch?v=kbvqRWY-bUs
 - Related external evidence: GitHub's "Continuous AI" / gh-aw — see
   [external-evidence.md](../external-evidence.md) §1.
