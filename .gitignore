@@ -1,3 +1,6 @@
 
 # Temp working dir for raw conference spec extraction (not part of the knowledge base)
 .specs-raw/
+
+# Claude Code per-session worktrees (isolated checkouts; never commit)
+.claude/worktrees/
