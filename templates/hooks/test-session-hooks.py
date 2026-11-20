@@ -166,6 +166,15 @@ def main() -> int:
             res = sh(tmp, sys.executable, "-I", str(loose / "session-start.py"))
             expect("not a repo: exit 0 and says so", res.returncode == 0 and "is not inside a git repository" in res.stdout, res.stdout + res.stderr)
 
+        # --- 4a. out of time: the digest says it is incomplete, never pretends all is well ---
+        env0 = dict(os.environ, SESSION_DIGEST_BUDGET="0")
+        res = subprocess.run([sys.executable, "-I", str(quiet / ".claude" / "hooks" / "session-start.py")],
+                             cwd=quiet, capture_output=True, text=True, encoding="utf-8", env=env0, check=False)
+        expect("out of time: exit 0, says DIGEST INCOMPLETE, end marker still printed",
+               res.returncode == 0 and "DIGEST INCOMPLETE" in res.stdout and "=== end work state ===" in res.stdout,
+               res.stdout + res.stderr)
+        expect("out of time: never blames the git version", "git 2.41+ is needed" not in res.stdout, res.stdout)
+
         # --- 4b. trial reviews: "On trial" as the LAST section, and an undated item ---
         trials = new_repo(tmp, "trials")
         write(trials, "TODO.md",

@@ -66,17 +66,33 @@ GIT = find_exe("git")
 GIT_TIMEOUT = 20  # seconds per call at most
 # One deadline for the whole digest, under settings.json's 120 s, so a slow repo loses its
 # last sections instead of overrunning (Claude Code would then discard everything).
-DEADLINE = time.monotonic() + 100
+# SESSION_DIGEST_BUDGET (seconds) exists so the test can exercise the out-of-time path.
+try:
+    _BUDGET = float(os.environ.get("SESSION_DIGEST_BUDGET", "100"))
+except ValueError:
+    _BUDGET = 100.0
+DEADLINE = time.monotonic() + min(max(_BUDGET, 0.0), 100.0)
+TIMED_OUT = False  # set once any git call is skipped or killed for time
 
 
 def time_left(cap: float) -> float:
     return max(0.0, min(cap, DEADLINE - time.monotonic()))
 
 
-def git(*args: str, cwd: Path | str | None = None) -> str:
-    """Run git and return its stdout, or '' on any failure or timeout (nothing to report)."""
-    budget = time_left(GIT_TIMEOUT)
-    if GIT is None or budget < 1:
+def git(*args: str, cwd: Path | str | None = None, first: bool = False) -> str:
+    """Run git and return its stdout, or '' on any failure or timeout (nothing to report).
+
+    A call skipped or killed for time sets TIMED_OUT, so the digest can say it is incomplete
+    instead of passing off a missing section as "nothing to report".
+    """
+    global TIMED_OUT
+    if GIT is None:
+        return ""
+    # The first call (finding the repo) always gets its own 20 s: without it there is no
+    # digest at all, and "out of time" would be misreported as "not a git repository".
+    budget = GIT_TIMEOUT if first else time_left(GIT_TIMEOUT)
+    if budget < 1:
+        TIMED_OUT = True
         return ""
     cmd = [GIT]
     if cwd is not None:
@@ -87,7 +103,10 @@ def git(*args: str, cwd: Path | str | None = None) -> str:
             cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
             timeout=budget,
         )
-    except (OSError, ValueError, subprocess.TimeoutExpired):
+    except subprocess.TimeoutExpired:
+        TIMED_OUT = True
+        return ""
+    except (OSError, ValueError):
         return ""
     if res.returncode != 0:
         return ""
@@ -119,7 +138,7 @@ def parse_iso(value: str) -> datetime | None:
 # Using the cwd means the script silently prints nothing when run from anywhere else --
 # and a hook that fails silently is worse than no hook, because it looks installed.
 here = Path(__file__).resolve().parent
-root_text = git("rev-parse", "--show-toplevel", cwd=here).strip()
+root_text = git("rev-parse", "--show-toplevel", cwd=here, first=True).strip()
 if not root_text:
     out(f"session-start: '{here}' is not inside a git repository - no work-state digest.")
     sys.exit(0)
@@ -329,7 +348,9 @@ if base:
         f"--format=%(refname:short)%09%(ahead-behind:{base})%09%(committerdate:iso-strict)",
         "refs/heads", "refs/remotes/origin", cwd=root,
     )
-    if not refs or not re.search(r"\t\d+ \d+\t", refs[0]):
+    if not refs and TIMED_OUT:
+        emit(["", f"BRANCHES AHEAD OF {base}: not computed (the digest ran out of time)."])
+    elif not refs or not re.search(r"\t\d+ \d+\t", refs[0]):
         emit(["", f"BRANCHES AHEAD OF {base}: not computed (git 2.41+ is needed for "
                   "%(ahead-behind))."])
     else:
@@ -375,5 +396,9 @@ if base:
                 emit([f"  ... and {skipped} more unmerged branch(es) not listed (cap {cap}). "
                       "That many is itself the finding."])
 
+if TIMED_OUT:
+    emit(["", "DIGEST INCOMPLETE: the time budget ran out, so some git checks were skipped "
+              "and their sections may be missing above. Check `git status` and "
+              "`git log --branches --not --remotes` by hand."])
 out("=== end work state ===")
 sys.exit(0)
