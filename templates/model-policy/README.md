@@ -57,6 +57,8 @@ script does not lay it down. It enforces the adopted rule *Triage the models and
 - **It saves room under a plan's limits, probably not cash,** and less than you might hope: building and test runs stay on Opus.
 - **Not covered:** agents inside a Workflow script, a session started from a saved preset, a person's own model picker,
   and a plugin's helpers (`plugin:name`): the hook reads helper definitions only from the repo's and the user's
-  `.claude/agents/`. A helper named like one of the kit's (`scout`, `reviewer`, ...) runs on a cheap model only if its
-  definition holds no more tools than the kit's own.
+  `.claude/agents/`. A helper named like one of the kit's (`scout`, `reviewer`, `light-editor`, `web-researcher`) runs on a
+  cheap model only if every file that could define it, in the repo's or the user's `.claude/agents/` at any depth, is in
+  the kit's own plain format (one-line `name:`, `model:` and `tools:`, no more tools than the kit's). The hook does not
+  parse YAML, so anything else is refused rather than guessed at: keep the kit's files as they are.
 - **Stopping it:** creating `~/.claude/model-policy-off` stops the routing hook in every repo at once. The guard stays on.

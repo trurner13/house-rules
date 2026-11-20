@@ -49,96 +49,107 @@ def log_call(agent_type: str, family: str) -> None:
         pass
 
 
-# The kit's own helpers and the tools each may hold. A definition under one of these names that
-# lists any other tool (or no tools line, which means every tool) is not the kit's helper, so a
-# cheap model on it is refused: the name alone is never trusted.
 KIT_TOOLS = {
     "scout": {"Read", "Grep", "Glob"},
     "reviewer": {"Read", "Grep", "Glob"},
     "light-editor": {"Read", "Grep", "Glob", "Edit", "Write"},
     "web-researcher": {"WebSearch", "WebFetch"},
 }
+CHEAP_WORD = re.compile(r"(?<![A-Za-z0-9_-])(haiku|sonnet)(?![A-Za-z0-9_-])", re.I)
+
+# This hook does not try to read YAML. YAML has many ways to write the same thing, and every way
+# a parser misreads is a way round the check. Instead it finds every file that could define the
+# helper and judges them conservatively: a mistake here can only refuse a call, never allow one.
 
 
-def _clean(value: str) -> str:
-    """One YAML scalar as a YAML reader sees it: a quoted value is taken up to its closing quote,
-    and an unquoted one stops at a comment (` #`, a # after a space or tab)."""
-    value = value.strip()
-    if value[:1] in ("'", '"'):
-        end = value.find(value[0], 1)
-        if end > 0:
-            return value[1:end].strip()
-    value = re.split(r"[ \t]#", value, maxsplit=1)[0] if not value.startswith("#") else ""
-    return value.strip()
+def candidates(agent_type: str) -> list[tuple[pathlib.Path, str | None]]:
+    """Every helper definition that could be agent_type, with its frontmatter (None if it has none).
 
-
-def _items(value: str) -> list[str]:
-    """A tools value as a list: `A, B`, `[A, B]` or `"A, B"`, each item cleaned."""
-    value = _clean(value)
-    if value.startswith("[") and value.endswith("]"):
-        value = value[1:-1]
-    return [t for t in (_clean(part) for part in value.split(",")) if t]
-
-
-def parse_front(head: str) -> dict[str, list[str]]:
-    """Top-level keys of a helper's frontmatter, as Claude Code reads them, each as a list of
-    values: quotes and comments stripped, and a block list (`- A` lines, indented or not, under
-    a key with no value of its own) gathered under that key. Nested blocks (a `hooks:` table)
-    go to their own key and never to another."""
-    fields: dict[str, list[str]] = {}
-    key, list_open = "", False
-    for line in head.splitlines():
-        if not line.strip() or line.lstrip().startswith("#"):
-            continue
-        top = re.match(r"^([A-Za-z_-]+):(.*)$", line)
-        if top:
-            key, raw = top.group(1), top.group(2)
-            value = _clean(raw)
-            fields[key] = _items(raw) if value else []
-            list_open = not value
-            continue
-        item = re.match(r"^[ \t]*-[ \t]+(.*)$", line) or re.match(r"^[ \t]*-$", line)
-        if item and key and list_open:
-            text = _clean(item.group(1)) if item.groups() else ""
-            if text and ":" not in text:
-                fields[key].append(text)
-            elif ":" in text:
-                list_open = False  # a list of tables (e.g. hooks): not a list of names
-    return fields
-
-
-def find_definition(agent_type: str) -> tuple[str, set[str] | None] | None:
-    """The `model:` and `tools:` of the helper named agent_type, from the repo's or the user's
-    .claude/agents/ (matched on the `name:` line, else the file name). None when none is found;
-    tools is None when the definition has no tools line (it then gets every tool)."""
+    Searched: the project's and the user's .claude/agents/, at any depth. A file counts when its
+    name is agent_type, or when agent_type appears as a word on any frontmatter line other than
+    the description. Over-matching is safe: it can only lead to a refusal.
+    """
     if not re.fullmatch(r"[A-Za-z0-9._-]+", agent_type):
-        return None
+        return []
     folders = []
     project = os.environ.get("CLAUDE_PROJECT_DIR", "")
     if project:
         folders.append(pathlib.Path(project, ".claude", "agents"))
     folders.append(pathlib.Path(os.environ.get("CLAUDE_AGENTS_HOME") or pathlib.Path.home() / ".claude" / "agents"))
+    word = re.compile(rf"(?<![A-Za-z0-9_-]){re.escape(agent_type)}(?![A-Za-z0-9_-])")
+    found: list[tuple[pathlib.Path, str | None]] = []
     for folder in folders:
         try:
-            files = sorted(folder.glob("*.md"))
+            files = sorted(folder.rglob("*.md"))
         except OSError:
             continue
         for f in files:
             try:
-                text = f.read_text(encoding="utf-8-sig")  # -sig: a byte-order mark must not hide the header
+                text = f.read_text(encoding="utf-8-sig")  # -sig: a byte-order mark must not hide anything
             except (OSError, ValueError):
+                text = None
+            head_match = re.match(r"---[ \t]*\n(.*?)\n---", text, re.S) if text is not None else None
+            head = head_match.group(1) if head_match else None
+            named = head is not None and any(
+                word.search(line) for line in head.splitlines() if not line.lstrip().lower().startswith("description"))
+            if f.stem == agent_type or named:
+                found.append((f, head))
+    return found
+
+
+def plain_kit_form(head: str | None, agent_type: str) -> bool:
+    """True only for the kit's own plain format: one-line `name:`, `description:`, `model:` and
+    `tools:` (and, for light-editor, its `hooks:` block), each once, tools a comma list within the
+    kit's set. Anything else (quotes, lists, comments, continued lines, other keys) is not plain."""
+    if head is None:
+        return False
+    seen: set[str] = set()
+    in_hooks = False
+    for line in head.splitlines():
+        if not line.strip():
+            continue
+        if line[0] in " \t":
+            if in_hooks:
                 continue
-            head = re.match(r"---[ \t]*\r?\n(.*?)\r?\n---", text, re.S)
-            if not head:
+            return False
+        in_hooks = False
+        m = re.fullmatch(r"(name|description|model|tools|hooks):(?: (.*))?", line)
+        if not m or m.group(1) in seen:
+            return False
+        key, value = m.group(1), (m.group(2) or "").strip()
+        seen.add(key)
+        if key == "name" and value != agent_type:
+            return False
+        if key == "model" and value not in ("haiku", "sonnet", "opus", "fable", "inherit"):
+            return False
+        if key == "tools":
+            if not re.fullmatch(r"[A-Za-z]+(?:, [A-Za-z]+)*", value):
+                return False
+            if not set(value.split(", ")) <= KIT_TOOLS[agent_type]:
+                return False
+        if key == "description" and (not value or value[0] in "\"'|>[{&*!%@`" or " #" in value):
+            return False
+        if key == "hooks":
+            if value or agent_type != "light-editor":
+                return False
+            in_hooks = True
+    return {"name", "tools"} <= seen
+
+
+def cheap_hint(heads: list[tuple[pathlib.Path, str | None]]) -> str:
+    """'haiku' or 'sonnet' if any candidate's frontmatter names one outside its description,
+    however it is written; '' otherwise."""
+    found = ""
+    for _, head in heads:
+        for line in (head or "").splitlines():
+            if line.lstrip().lower().startswith("description"):
                 continue
-            fields = parse_front(head.group(1))
-            name = (fields.get("name") or [f.stem])[0]
-            if name != agent_type:
-                continue
-            tools = fields.get("tools")
-            names = set(tools) if tools else None
-            return " ".join(fields.get("model", [])).lower(), names
-    return None
+            m = CHEAP_WORD.search(line)
+            if m:
+                found = m.group(1).lower()
+                if found == "haiku":
+                    return found
+    return found
 
 
 def main() -> None:
@@ -155,10 +166,6 @@ def main() -> None:
         return
 
     family = next((f for f in ("haiku", "sonnet", "opus", "fable") if f in model), "")
-    definition = find_definition(agent_type) if tool == "Agent" and agent_type not in ("", "fork") else None
-    if not family and definition:
-        # No model named in the call: the helper's own definition may still fix one.
-        family = next((f for f in ("haiku", "sonnet", "opus", "fable") if f in definition[0]), "")
 
     if re.search(r"(start_session|set_session_model)$", tool):
         if family in ALLOWED:
@@ -168,21 +175,29 @@ def main() -> None:
         return
 
     # A fork always runs on the parent session's model whatever the call says, so it is never a cheap model.
-    if agent_type != "fork":
-        if not family and agent_type in BUILT_IN:
-            refuse(f"a built-in helper needs a model named (agent type '{agent_type}')")
-        if family in ALLOWED and agent_type not in ALLOWED[family]:
-            names = " or ".join(sorted(ALLOWED[family]))
-            refuse(f"{family} runs only on {names}, which have no shell, not on agent type '{agent_type}'")
-        if family in ALLOWED and agent_type in KIT_TOOLS and definition is None:
+    if agent_type == "fork":
+        log_call(agent_type, family)
+        return
+
+    heads = candidates(agent_type) if agent_type else []
+    if not family:
+        # No model named in the call: a definition may still fix a cheap one, written any way at all.
+        family = cheap_hint(heads)
+
+    if not family and agent_type in BUILT_IN:
+        refuse(f"a built-in helper needs a model named (agent type '{agent_type}')")
+    if family in ALLOWED and agent_type not in ALLOWED[family]:
+        names = " or ".join(sorted(ALLOWED[family]))
+        refuse(f"{family} runs only on {names}, which have no shell, not on agent type '{agent_type}'")
+    if family in ALLOWED and agent_type in KIT_TOOLS:
+        if not heads:
             refuse(f"no definition of '{agent_type}' was found in .claude/agents/, so its tools cannot be checked "
                    f"and it does not run on {family}; copy the kit's agents/{agent_type}.md in first")
-        if family in ALLOWED and definition and agent_type in KIT_TOOLS:
-            tools = definition[1]
-            if tools is None or not tools <= KIT_TOOLS[agent_type]:
-                held = "every tool" if tools is None else ", ".join(sorted(tools))
-                refuse(f"'{agent_type}' here holds {held}, more than the kit's helper of that name "
-                       f"({', '.join(sorted(KIT_TOOLS[agent_type]))}), so it does not run on {family}")
+        for path, head in heads:
+            if not plain_kit_form(head, agent_type):
+                refuse(f"{path} could define '{agent_type}' and is not in the kit's plain format (one-line name, "
+                       f"model and tools, tools within {', '.join(sorted(KIT_TOOLS[agent_type]))}), so '{agent_type}' "
+                       f"does not run on {family}; rewrite it like the kit's agents/{agent_type}.md, or rename it")
     log_call(agent_type, family)
 
 
