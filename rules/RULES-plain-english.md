@@ -22,6 +22,13 @@ renamed or removed there without being updated here.
   happens in small steps that can each be checked. *Why:* the written plan, not the
   code, is what everyone agrees on. It's also what the result gets checked against.
   (In RULES.md: "Spec-first")
+- **Cut before you build.** Before a plan is approved, the AI goes through five steps
+  in order. First, every requirement says who asked for it, and anything the AI added
+  on its own is dropped unless a person wants it. Then delete whatever can go, expecting
+  to bring back about a tenth of it. Then simplify what's left. Then make it faster.
+  Automate last. *Why:* the AI tends to add extras nobody asked for, and doing the steps
+  out of order means polishing or automating something that shouldn't exist. It's
+  Musk's five-step method from SpaceX. (In RULES.md: "Question, delete, simplify — then speed up, automate last")
 - **People steer at the start, not at the end.** Humans own the plan and the design.
   The AI then writes, reviews, tests and merges the change itself once every automatic
   check passes, with no one reading every line. Changes prompted by outsiders always
@@ -62,11 +69,6 @@ renamed or removed there without being updated here.
   piece of work in progress. A test catches any that slip back in. *Why:* that folder
   disappears when the work is finished and merged, and every script that named it
   breaks — over a hundred of them did on one project. (In RULES.md: "Never hard-code a branch or a worktree")
-- **Judge AI by work that actually ships.** Measure how many AI-made changes get
-  accepted, how many needed no human fixing afterwards, and how many needed a fix within
-  a week. Don't count lines, changes opened or logins. Money spent on AI is the cost side
-  of that sum, not a sign of success or failure on its own. *Why:* the other numbers look
-  impressive while telling you nothing. (In RULES.md: "Measure adoption by merge rate, not vanity metrics")
 
 ## How the AI talks to us
 
@@ -75,13 +77,25 @@ renamed or removed there without being updated here.
   makes the AI's judgement worthless. (In RULES.md: "No sycophancy")
 - **Ask when unclear; don't guess.** If a request could mean several things, the AI
   lists them and asks, ideally as multiple choice with a recommendation. It only goes
-  ahead without asking when the meaning is obvious. *Why:* a quick question is cheaper
-  than building the wrong thing. (In RULES.md: "Clarify vague prompts — don't guess")
+  ahead without asking when the meaning is obvious. It never builds on a big
+  assumption: if a choice of meaning, scope or approach would change the result, it
+  asks first; a small one it states in a line and carries on. *Why:* a quick question
+  is cheaper than building the wrong thing. (In RULES.md: "Clarify vague prompts —
+  don't guess")
 - **Plain English, always.** The AI explains what changed and why it matters, in
   everyday words. Technical terms appear only when needed, and get explained on the
   spot. Plain doesn't mean vague: risks are still stated directly. *Why:* if people
   can't follow what the AI did, their review becomes a rubber stamp.
   (In RULES.md: "Plain English, always")
+- **Every decision comes with a briefing, as a multiple-choice question.** When the AI
+  needs someone to decide, each decision arrives with what it is about, why it matters,
+  the options with their trade-offs, and a recommendation with the reason — in everyday
+  words, never a pointer to a section to go and read. It is asked with the app's
+  multiple-choice questions where there is one, the recommended answer first, so the
+  person clicks an answer instead of typing one; everything waiting is asked together.
+  *Why:* a decision the human can't follow isn't a decision, it's a rubber stamp, and
+  decisions buried in long replies get missed. (In RULES.md: "Decisions come as a briefing, asked as
+  multiple choice")
 - **Keep checking the work still serves the goal.** Before each step, the AI asks
   whether it actually moves the agreed goal forward, and stops and says so if not. If
   the plan itself turns out wrong, the plan gets changed openly. *Why:* the typical AI
@@ -106,22 +120,25 @@ renamed or removed there without being updated here.
   must-follow rules, especially the knowledge that lives only in one person's head.
   When the AI hits a surprise, it records it there. *Why:* the AI can't know what was
   never written down. (In RULES.md: "Executable constraints in `CLAUDE.md`")
-- **A second AI tries to prove the work wrong.** A separate reviewer, of a different make
-  from the AI that wrote the change, looks for ways it is wrong, unsafe or incomplete.
-  Every finding must point to the exact file and line or it doesn't count, and after the
-  first round only serious findings are raised. The two go back and forth until it's
-  resolved, until a round turns up nothing new, up to about five rounds, or until a person
-  decides. Running the reviewer is part of the job, not something to ask permission for.
-  If it didn't run, the AI says so. *Why:* the author of a change is the worst judge of
-  it, and a reviewer of the same make shares its blind spots.
-  (In RULES.md: "Adversarial reviewer agent")
-- **Check harder where mistakes cost more.** Review depth depends on what a mistake would
-  cost and whether it can be undone. Money, anything irreversible, logins and
-  live customer-facing features get the full review. A change behind an on/off switch
-  gets a lighter one. Wording and layout just ship and get looked at. A tiny change
-  still counts: one small line once emptied a live shop's catalogue. *Why:* too little
-  review breaks things, too much wastes time while looking diligent.
-  (In RULES.md: "Scale the gate to the blast radius")
+- **Other AIs try to prove the work wrong.** Three reviewers, each a different Claude
+  model (Opus, Sonnet and Haiku), look at the same time for ways the change is wrong,
+  unsafe or incomplete. For changes where a mistake would be costly, Fable joins as a
+  fourth. They can only read, never change anything. Every finding must point to the
+  exact file and line or it doesn't count, and after the first round only serious
+  findings are raised. The back-and-forth stops when it's resolved, when a round turns
+  up nothing new, after about five rounds, or when a person decides. Running the
+  reviewers is part of the job, not something to ask permission for; if they didn't
+  run, the AI says so. *Why:* the author of a change is the worst judge of it. All the
+  reviewers are Claude, so they can share blind spots, and the review says so; using
+  one AI company here is a deliberate choice (2026-11-20). (In RULES.md: "Adversarial
+  reviewer agent")
+- **Check harder where mistakes cost more.** Review depth depends on what a mistake
+  would cost and whether it can be undone. Money, anything irreversible, logins and
+  live customer-facing features get the full review, with Fable as a fourth reviewer. A
+  change behind an on/off switch gets a lighter one. Wording and layout just ship and
+  get looked at. A tiny change still counts: one small line once emptied a live shop's
+  catalogue. *Why:* too little review breaks things, too much wastes time while looking
+  diligent. (In RULES.md: "Scale the gate to the blast radius")
 - **Safety checks must be automatic, not requests.** Anything that must block progress is
   an automatic check the AI can't talk its way past, not an instruction it's asked to
   follow. Only simple, reliable checks can block; AI opinions can advise but never
@@ -134,11 +151,6 @@ renamed or removed there without being updated here.
   plan or configuration file, and that file runs without the AI improvising each
   time. *Why:* results are repeatable and cheap to re-run.
   (In RULES.md: "Deterministic artifacts over runtime improvisation")
-- **Make the idea-to-release steps enforced, not optional** *(an aim, not yet in
-  place)*. Every change moves through fixed stages (sorted, planned, reviewed,
-  approved, built, merged, done) and can't skip one. Its progress is saved in the
-  issue list so it survives between sessions. *Why:* skipped steps are where mistakes
-  slip through. (In RULES.md: "Encode the idea→merge flow as an enforced state machine")
 - **Tests are the final word.** The AI must never weaken a test to make it pass; it
   fixes the code instead. Before release, the finished product is used like a real
   user would, deliberately tried to break, and checked for speed. *Why:* passing the
@@ -157,9 +169,6 @@ renamed or removed there without being updated here.
   a scheduled run only counts as safe once its connections are cut back to what it needs
   to read. *Why:* steady background upkeep, without handing over the keys.
   (In RULES.md: "Continuous AI — a third pillar beside CI/CD")
-- **Start small.** Turn one habit into a rule, run the whole process once, and let what
-  breaks tell you the next rule. *Why:* pointing AI at a whole repo at once and hoping
-  doesn't work. (In RULES.md: "Start tiny")
 - **Never give the same feedback twice.** Every repeated correction, incident or failed
   build becomes an automatic check so it can't happen again. *Why:* a correction that
   lives only in a conversation will be needed again.
@@ -169,9 +178,21 @@ renamed or removed there without being updated here.
   the same files, depend on each other, or wait on a design decision. Keep each batch
   small enough for the checks to keep up. Parallel means each session in its own separate
   copy of the repo, never Claude Code's "agent teams", which share one copy and wave each
-  other's plans through; a team-mate is never the one who reviews. *Why:* AI time is cheap
+  other's plans through; a team-mate is never the one who reviews. Which AI model does each piece is decided by the triage rule below. *Why:* AI time is cheap
   and waiting isn't. The real limit is how fast work can be checked, not how many agents
   you can start. (In RULES.md: "Parallelise by default")
+- **Test runs are a budget; never on paid cloud computers.** Builds, tests and releases
+  run on a machine of your own set up for it (a self-hosted runner), never on paid
+  hosted minutes or a cloud computer started for a job. If that machine is off, the
+  work waits. The AI checks its work locally first, sends each change to be tested
+  once, when it is finished, not after every fix, tests several finished changes
+  together, and says before starting how many runs it expects. Your own runner is only
+  safe for private repos: on a public one, a stranger's pull request would run code on
+  your machine. Paid AI-vendor extras (cloud code review, scheduled routines) count as
+  paid computers too: the AI asks before starting one, every time. *Why:* paid cloud
+  runs cost real money nobody had agreed to. This is a house rule, for cost; it is not
+  something the wider field recommends. (In RULES.md: "CI runs are a budget; never on paid cloud
+  compute")
 - **Each agent works in its own copy, which is tidied away afterwards.** Every parallel
   AI session gets its own separate working copy of the repo, called a worktree, kept
   in a hidden folder inside the repo. Before creating one, it checks for existing
@@ -186,6 +207,19 @@ renamed or removed there without being updated here.
   session is the real safety net: it shows anything left unsaved. *Why:* sessions crash
   or get closed, and work that only exists on one screen is lost.
   (In RULES.md: "Checkpoint before the turn ends; never trust the exit")
+- **One branch, one piece of work, merged the day it's approved.** A branch holds one
+  piece of work: one step of the plan, one feature or one decision. When the person
+  says yes to it, it is merged into the main version that same day, and the next piece
+  starts fresh from the main version, never stacked on top of a branch still waiting. A
+  branch is never merged into another branch (the one exception is a branch that only
+  gathers finished, approved changes to test them together once, and is merged or deleted
+  that day), and databases or live settings are only
+  ever reloaded from the main version. Each session starts by showing how far every
+  branch has drifted from main; one more than two days or one approved piece ahead is
+  raised as a merge question before new work. *Why:* on one project, five approved
+  pieces of work piled up unmerged on one branch for weeks, and the live system was
+  quietly running code that wasn't on main. (In RULES.md: "One branch, one increment,
+  merged on its yes")
 - **Build tools the AI can use well.** Tools are few and broad, loaded only when needed,
   rather than many narrow ones; each has a clear name and description, returns
   predictable results, and gives error messages the AI can learn from. Tools that delete
@@ -199,15 +233,17 @@ renamed or removed there without being updated here.
   framing nudges the reviewer into accepting the author's approach, and reading only the
   edited lines misses bugs that span files.
   (In RULES.md: "Review the merged result with the whole repo in view, withholding the author's framing")
-- **The lead AI must be a strong model.** Cheap, small models are fine for low-stakes
-  helper jobs, never for the AI in charge. *Why:* the lead makes the decisions everything
-  else follows. (In RULES.md: "Don't let weak models drive the top-level agent")
-- **One agent by default; a helper only for separate work or a second opinion.** Splitting
-  a job that is really one chain of steps across several AIs costs up to ten times more and
-  does worse. Add a helper only when the pieces are genuinely independent, or when a second
-  AI of a different make must judge the first, and only if it measurably helps. Every agent
-  runs visibly with only the access it needs. *Why:* more agents is not more capability; it
-  is more cost and more handoffs. (In RULES.md: "Default to one agent; add a scoped helper only for independent work or a separate reviewer")
+- **Pick the right AI model, and the right number of agents, for each job.** The AI in
+  charge is always a strong model. It gives each piece of work the model that suits it:
+  Haiku for simple, mechanical sweeps, Sonnet for routine work, Opus for judgment,
+  Fable for the hardest or most costly-if-wrong. A job only moves to a cheaper model
+  once there is a check that says what a correct result looks like, and a helper's work
+  is checked before it is used. Work that is one chain of steps stays with one agent,
+  because splitting it costs up to ten times more and does worse; independent pieces
+  and reviews are spread across several. Every agent runs visibly with only the access
+  it needs. *Why:* the strongest model is wasted on legwork and a weak one is dangerous
+  in charge; matching them to the job saves money without losing quality. (In RULES.md:
+  "Triage the models and agents for each job")
 - **AI signs its own work.** An AI running on GitHub's or Anthropic's cloud saves changes
   under its own name, signed, with a link to the record of its session. Claude Code on a
   developer's machine cannot do that: its changes are in the person's name with a "co-authored by
@@ -318,11 +354,16 @@ renamed or removed there without being updated here.
   not protection. *Why:* a skill is someone
   else's code running with your AI's access.
   (In RULES.md: "Vet skills like untrusted dependencies")
-- **A person approves the risky actions.** Running commands, sending anything out, and
-  anything that can't be undone need a human yes. Keep those prompts few enough that
-  each is actually read. Where that's impossible, remove the ability rather than add
-  another prompt. *Why:* people who click "approve" all day stop reading, and that's
-  now the known way these safeguards fail. (In RULES.md: "Human gate on the dangerous legs")
+- **A person approves the risky actions, at the edge of the walls.** Where the AI works
+  inside a sandbox (a walled-off area it can't escape), its commands run without
+  asking, because they can't do real harm. A person is asked only when something would
+  go beyond the walls: running outside the sandbox, sending anything out, anything that
+  can't be undone, or changes through connected services. On a machine with no sandbox,
+  such as Windows without WSL2, every command still needs a yes and the AI is never
+  given outsiders' material. Keep those prompts few enough that each is actually read;
+  where that's impossible, remove the ability rather than add another prompt. *Why:*
+  people who click "approve" all day stop reading, and that's now the known way these
+  safeguards fail. (In RULES.md: "Human gate on the dangerous legs")
 - **Treat anything being reviewed as possibly hostile.** In any AI review, the change,
   its description and comments may contain attempts to manipulate the reviewer. Flag
   them, and give the reviewer read-only access. *Why:* hidden instructions in a change

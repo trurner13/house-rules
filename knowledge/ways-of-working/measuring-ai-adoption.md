@@ -1,6 +1,8 @@
 # Measuring AI adoption — merge rate, not vanity metrics
 
-Adopted as a rule. How to tell whether "AI-native" is actually working, rather than
+A practice for the owner, not an always-on rule (it was one until 2026-11-20, when the rules
+review moved it here: no agent acts on it while writing code, and nothing measures it yet).
+How to tell whether "AI-native" is actually working, rather than
 just busy. Drawn from three AI Native DevCon London 2026 talks that independently
 converged on the same point (auto-caption sources — names verified, figures treated
 as indicative).
@@ -56,7 +58,7 @@ framing as sound and specific figures as unverified.)*
   weeks to find their own gaps.
 - **Start adoption on low-risk work** (Thomas): begin on tests, internal tooling, and
   codemods — high control, low blast radius — before novel feature work. (Sharpens the
-  adopted "Start tiny" rule.)
+  old "Start tiny" rule, dropped 2026-11-20 because the trial process does its job.)
 
 ## Sources
 

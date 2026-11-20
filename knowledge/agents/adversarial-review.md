@@ -11,6 +11,15 @@ outcome in its training data. Inverting the objective — you are trying to *bre
 changes what it looks for. And because the reviewer is cheap and parallel, you can afford
 several with different lenses, which is the one thing a single human reviewer can't do.
 
+**How many, and which models** (rule change 2026-11-20): three reviewers in parallel, one each
+on Claude Opus, Sonnet and Haiku, given the same prompt; add Fable as a fourth when the change
+is in the full-review tier of *Scale the gate to the blast radius* (spend, irreversible writes,
+auth, live customer surfaces). Merge their findings, noting which models raised each one; a
+finding only one or two raised, or raised with low confidence, goes to a skeptic agent that
+tries to refute it. This replaces "a reviewer of a different model family": nothing here runs a
+second provider, and being Claude-only is now a recorded choice. The cost is shared blind spots,
+so every review says the reviewers are one family.
+
 **What to check** is the dimensions list —
 [agent-constraints/adversarial-dimensions](../../templates/agent-constraints/adversarial-dimensions.md).
 This note is **how to run it** so the verdict is worth something.

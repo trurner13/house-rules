@@ -67,6 +67,27 @@ you actually care about belongs in the pipeline, not in the prompt. Run the suit
 own pipeline rather than asking the agent to report on it — an agent reporting its own
 test results is a self-graded exam.
 
+## Two optional probes (AI DevCon NYC, taken forward 2026-11-10)
+
+Practices, not rules: neither is in `rules/RULES.md`.
+
+- **Is the eval itself healthy?** An eval (a scored set of test tasks for a model, skill or
+  prompt) is suspect when the best models all land on the same score, or when more effort
+  does not raise it. One team's models all sat at 50%: the other half were impossible tasks
+  or wrongly marked answers. Read the transcripts of the runs, not only the score, because
+  impossible tasks and cheating show up nowhere else. Aim for the best models to score
+  roughly 60-80%, grade the outcome and not the steps, and run the eval sealed, because a
+  capable model will game it
+  ([carmont-zaragoza](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=13705s),
+  04:10:11-04:17:28).
+- **The regeneration test.** Pick one small, boring, low-risk component and have an agent
+  rebuild it beside the original from the spec and the tests alone. Whatever breaks is
+  knowledge that lives only in the code, so write it into the spec. For that to work the
+  tests must check behaviour at the component's edge and not be tied to one language or
+  framework. Run it as an optional step in the scheduled drift review; it costs a session
+  each time ([fowler](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=21540s),
+  06:12:34, 06:22:32).
+
 **Related:** [findings-to-guardrails](../ways-of-working/findings-to-guardrails.md) —
 what to do with each failure so it can't recur.
 

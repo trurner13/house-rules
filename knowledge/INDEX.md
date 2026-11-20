@@ -19,6 +19,7 @@ London, June 2026** (31 talks via the Tessl registry) plus ongoing notes.
 - [luebken-embedding-pi-coding-agent](agents/luebken-embedding-pi-coding-agent.md) — embed a coding agent into a product via four primitives (setup, tools, extensions, sessions).
 - [maple-harness-engineering](agents/maple-harness-engineering.md) — harness engineering: make "good" legible to agents and surface guardrails just-in-time.
 - [marsden-agent-desktops](agents/marsden-agent-desktops.md) — give every agent its own desktop; a seven-dimension design space for server-side agents.
+- [opus-drives-cheaper-helpers](agents/opus-drives-cheaper-helpers.md) — adopted as *Triage the models and agents for each job*: a strong model leads and hands independent legwork to cheaper helpers, checking what comes back. Enforced kit: [templates/model-policy/](../templates/model-policy/README.md).
 
 ## RAG & data
 - [douglas-training-ai-on-your-own-code](rag/douglas-training-ai-on-your-own-code.md) — capture agent sessions via a telemetry proxy and fine-tune small local models (QLoRA, SFT vs DPO).
@@ -49,6 +50,8 @@ London, June 2026** (31 talks via the Tessl registry) plus ongoing notes.
 - [maleix-collective-intelligence](ways-of-working/maleix-collective-intelligence.md) — turn agents' attributed mistakes into reusable team knowledge (three-act workflow).
 - [martinelli-spec-driven-development](ways-of-working/martinelli-spec-driven-development.md) — the AI Unified Process: keep use cases as the stable spec, regenerate code from them.
 - [measuring-ai-adoption](ways-of-working/measuring-ai-adoption.md) — the adopted metric: merge rate and zero-follow-up share; which vanity metrics to demote (three talks).
+- [merge-unit-and-branch-lifetime](ways-of-working/merge-unit-and-branch-lifetime.md) — one branch, one increment, one yes that merges the same day; never branch-into-branch; shared data follows main. From a survey of three sibling repos.
+- [question-delete-simplify](ways-of-working/question-delete-simplify.md) — Musk's five steps in order before a plan is approved: who asked for each requirement (cut the agent's own), delete, simplify, speed up, automate last.
 - [parallel-by-default](ways-of-working/parallel-by-default.md) — split work and run it at once; serial needs a reason (shared files, output dependency, open decision); batch size capped by the gates.
 - [reviewing-someone-elses-ai-written-pr](ways-of-working/reviewing-someone-elses-ai-written-pr.md) — a person leads, AI assists: intent, own first pass, directed read-only AI pass, verify every finding, verdict-first written review; transcript tips for take-home reviews.
 - [session-handover-and-work-state](ways-of-working/session-handover-and-work-state.md) — a session is not a unit of storage: checkpoint the branch, capture the intent, and make the *next* session's start the gate.
