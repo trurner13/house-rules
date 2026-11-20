@@ -12,7 +12,10 @@ level? Is there a better, already-established pattern? Check the repo's design d
 ## Scope
 
 Too much or too little? Does it match the issue/spec? Any scope creep or
-unnecessary changes?
+unnecessary changes? Does every requirement name who asked for it, and is any one the agent
+invented? What could be deleted outright, not just simplified? Is anything being sped up or
+automated that shouldn't exist?
+([question-delete-simplify](../../knowledge/ways-of-working/question-delete-simplify.md))
 
 ## Risk
 

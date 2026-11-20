@@ -33,7 +33,8 @@ June 2026.
 │   │                              #   "autoMemoryEnabled": false
 │   ├── settings.local.json        # personal / machine overrides            → GITIGNORE
 │   ├── hooks/                     # hook scripts referenced by settings.json → COMMIT
-│   │   └── session-start.ps1      #   prints the work-state digest into context
+│   │   ├── session-start.py       #   prints the work-state digest into context
+│   │   └── session-end.py         #   copies the transcript to the session archive
 │   └── worktrees/                 # per-session isolated checkouts           → GITIGNORE
 │       └── <issue-id>/            #   the ONLY place worktrees live; removed once the branch merges
 ├── .githooks/                     # VERSIONED git hooks                      → COMMIT
@@ -97,9 +98,17 @@ June 2026.
 - **No private memory** — commit `"autoMemoryEnabled": false` in `.claude/settings.json`.
   Anything worth remembering is a repo edit. *(adopted: durable knowledge lives in the repo)*
 - **Sessions are kept** — the same file sets `"cleanupPeriodDays": 3650`; a repo that opts
-  in also wires the `SessionEnd` hook (`session-end.ps1`, off by default) that copies each
+  in also wires the `SessionEnd` hook (`session-end.py`, off by default) that copies each
   transcript to `~/.claude/session-archive/<repo>/`. Without the setting, Claude Code deletes
   transcripts after 30 days. *(adopted: retain all sessions)*
+- **One runtime for the harness hooks: Python, launched by uv.** `settings.json` runs each
+  hook as `uv run --no-sync python .claude/hooks/<hook>.py`, so **uv is the one installer a
+  consumer repo needs on either OS** (Windows, Linux, macOS). The hooks are standard library
+  only (Python 3.9+) and uv fetches an interpreter where none is installed. In a Python
+  project uv uses the project's `.venv` without syncing it (on a fresh clone it creates an
+  empty one); in a repo with no Python project it uses whatever interpreter it finds and
+  prints a harmless `--no-sync has no effect` warning on stderr. The PowerShell hooks were
+  retired on 2026-10-30 because the kit did not load on Linux. Git hooks stay POSIX `sh`.
 - **Hook timeouts are generous and output is streamed** — on timeout Claude Code discards
   *everything* a hook printed, so the digest hook has 120 s (the platform default is 600 s)
   and prints most-important-first. Never set `"attribution": false` in a committed settings

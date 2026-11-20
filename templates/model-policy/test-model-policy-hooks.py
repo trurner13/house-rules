@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+"""Holds the two model-policy hooks to their cases. Run: python templates/model-policy/test-model-policy-hooks.py
+
+Exit 0 when every case holds, 1 otherwise, with one line per failing case. Standard library only.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
+
+HERE = pathlib.Path(__file__).resolve().parent
+ROUTE = HERE / "hooks" / "check-helper-model.py"
+GUARD = HERE / "hooks" / "guard-light-editor.py"
+
+ROUTE_CASES = [
+    ({"subagent_type": "general-purpose"}, "Agent", 2),
+    ({}, "Agent", 2),
+    ({"subagent_type": "Plan"}, "Agent", 2),
+    ({"subagent_type": "Explore"}, "Agent", 2),
+    ({"subagent_type": "Plan", "model": "opus"}, "Agent", 0),
+    ({"subagent_type": "Explore", "model": "haiku"}, "Agent", 2),
+    ({"subagent_type": "general-purpose", "model": "sonnet"}, "Agent", 2),
+    ({"subagent_type": "statusline-setup", "model": "haiku"}, "Agent", 2),
+    ({"subagent_type": "a-reviewer", "model": "sonnet"}, "Agent", 2),
+    ({"subagent_type": "light-editor", "model": "haiku"}, "Agent", 2),
+    ({"subagent_type": "scout"}, "Agent", 0),
+    ({"subagent_type": "scout", "model": "haiku"}, "Agent", 0),
+    ({"subagent_type": "light-editor"}, "Agent", 0),
+    ({"subagent_type": "light-editor", "model": "sonnet"}, "Agent", 0),
+    ({"subagent_type": "web-researcher", "model": "sonnet"}, "Agent", 0),
+    ({"subagent_type": "claude-code-guide", "model": "sonnet"}, "Agent", 0),
+    ({"subagent_type": "claude-code-guide"}, "Agent", 0),
+    ({"subagent_type": "a-reviewer"}, "Agent", 0),
+    ({"subagent_type": "fork"}, "Agent", 0),
+    ({"model": "claude-sonnet-5-5"}, "mcp__ccd_session__start_session", 2),
+    ({"model": "claude-haiku-5-5", "session_id": "x"}, "mcp__ccd_session_mgmt__set_session_model", 2),
+    ({"model": "claude-opus-5-5"}, "mcp__ccd_session__start_session", 0),
+    ({"initiation": "offer", "title": "x"}, "mcp__ccd_session__start_session", 0),
+    ({"proposal_id": "x"}, "mcp__ccd_session__start_session", 0),
+    ({"command": "git status"}, "Bash", 0),
+]
+
+
+def run(hook: pathlib.Path, payload: str, env: dict) -> int:
+    return subprocess.run([sys.executable, str(hook)], input=payload, capture_output=True, text=True,
+                          env={**os.environ, **env}).returncode
+
+
+def test_route(problems: list, work: pathlib.Path) -> None:
+    trial = {"MODEL_TRIAL_DIR": str(work / "trial"), "MODEL_POLICY_OFF": str(work / "no-such-file")}
+    for tool_input, tool, want in ROUTE_CASES:
+        code = run(ROUTE, json.dumps({"tool_name": tool, "tool_input": tool_input}), trial)
+        if code != want:
+            problems.append(f"route: {tool} {tool_input} gave {code}, wanted {want}")
+    if run(ROUTE, "not json", trial) != 0:
+        problems.append("route: unreadable input did not pass (it must fail open)")
+    off = work / "off"
+    off.write_text("off", encoding="utf-8")
+    if run(ROUTE, json.dumps({"tool_name": "Agent", "tool_input": {}}), {**trial, "MODEL_POLICY_OFF": str(off)}) != 0:
+        problems.append("route: the off switch did not pass a refused call")
+
+
+def test_guard(problems: list, work: pathlib.Path) -> None:
+    repo = work / "repo"
+    (repo / ".git").mkdir(parents=True)
+    (repo / ".claude").mkdir()
+    shutil.copy(HERE / "protected-paths.txt", repo / ".claude" / "protected-paths.txt")
+    with open(repo / ".claude" / "protected-paths.txt", "a", encoding="utf-8") as listing:
+        listing.write("src/Billing/\nsrc/*Money.cs\n*.js\n")
+    worktree = repo / ".claude" / "worktrees" / "x"
+    (worktree / ".claude").mkdir(parents=True)
+    (worktree / ".git").write_text("gitdir: elsewhere", encoding="utf-8")
+    shutil.copy(repo / ".claude" / "protected-paths.txt", worktree / ".claude" / "protected-paths.txt")
+    bare = work / "no-list"
+    (bare / ".git").mkdir(parents=True)
+    outside = work / "outside"
+    outside.mkdir()
+    cases = [
+        (repo / "docs" / "a.md", 0),
+        (repo / "README.md", 0),
+        (repo / "src" / "Page.cs", 0),
+        (repo / "CLAUDE.md", 2),
+        (repo / "claude.MD", 2),
+        (repo / ".claude" / "settings.json", 2),
+        (repo / "scripts" / "x.py", 2),
+        (repo / "src" / "Billing" / "Charge.cs", 2),
+        (repo / "SRC" / "billing" / "Charge.cs", 2),
+        (repo / "src" / "PriceMoney.cs", 2),
+        (repo / "src" / "embed" / "loader.js", 2),
+        (f"{repo}{os.sep}docs{os.sep}..{os.sep}CLAUDE.md", 2),
+        (worktree / "docs" / "a.md", 0),
+        (worktree / "src" / "Billing" / "Charge.cs", 2),
+        (worktree / ".claude" / "settings.json", 2),
+        (repo / "theme" / ".git", 2),
+        (repo / "theme" / ".git" / "HEAD", 2),
+        (repo / "theme" / ".claude" / "protected-paths.txt", 2),
+        (bare / "a.md", 2),
+        (outside / "a.md", 2),
+        (f"{repo / 'CLAUDE.md'}::$DATA", 2),
+        (repo / "CLAUDE~1.MD", 2),
+    ]
+    trial = {"MODEL_TRIAL_DIR": str(work / "trial")}
+    for path, want in cases:
+        code = run(GUARD, json.dumps({"tool_input": {"file_path": str(path)}}), trial)
+        if code != want:
+            problems.append(f"guard: {path} gave {code}, wanted {want}")
+    for payload in ["not json", json.dumps({"tool_input": {}})]:
+        if run(GUARD, payload, trial) != 2:
+            problems.append(f"guard: {payload!r} did not refuse (it must fail closed)")
+    if not list((work / "trial").glob("guard-*.txt")):
+        problems.append("guard: wrote no log")
+
+
+def main() -> int:
+    problems: list = []
+    with tempfile.TemporaryDirectory() as folder:
+        work = pathlib.Path(folder).resolve()
+        test_route(problems, work)
+        test_guard(problems, work)
+    for line in problems:
+        print(f"FAIL: {line}")
+    print("test-model-policy-hooks: OK" if not problems else f"test-model-policy-hooks: {len(problems)} failed")
+    return 1 if problems else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
