@@ -9,6 +9,10 @@ on:
     branches: [main]
   pull_request:
 
+# Read-only token: the gates read the repo and write nothing back.
+permissions:
+  contents: read
+
 jobs:
   gates:
     runs-on: ubuntu-latest
@@ -32,5 +36,9 @@ jobs:
       # a claim, not a check.
       - name: Completeness gate's own tests
         run: python templates/hooks/test-check-committed.py
+      - name: Session hooks print the digest and archive the transcript
+        run: python templates/hooks/test-session-hooks.py
+      - name: The model policy's hooks hold to their cases
+        run: python templates/model-policy/test-model-policy-hooks.py
       - name: A fresh clone is the deliverable
         run: python templates/hooks/check-committed.py --ci

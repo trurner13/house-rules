@@ -205,7 +205,7 @@ Hook facts verified against the Claude Code docs and a local **v2.1.220** instal
 | Refuse a malformed checkpoint | `commit-msg` (plain git) | **Yes**, absolutely — and it has no override, works for human commits, and needs no Claude Code version |
 | Allow a red gate for a checkpoint only | `pre-commit` reading `CHECKPOINT=1` | **Yes.** Strictly better than `--no-verify` |
 | Reconcile before a workspace is created | `WorktreeCreate` | **Yes** — "any non-zero exit code causes worktree creation to fail". Only fires for Claude Code's own worktree feature, so pair it with a `PreToolUse` matcher for raw `git worktree add` on **every** command-running tool — `Bash`, `PowerShell` and `Monitor`. A matcher covering one shell is a hole, not a gate |
-| Close the workspace | `SessionEnd`, `WorktreeRemove` | **No.** Output discarded, 1.5s default budget (raisable to 60s per-hook). Backstop only. The kit's `session-end.ps1` is an **opt-in** use of it: wired by hand (the block is in the script's header), it copies the transcript, unencrypted and never purged, to `~/.claude/session-archive/<repo>/` (10 s timeout), because Claude Code deletes transcripts after `cleanupPeriodDays`; `settings.json` sets that to 3650 as the backstop for the sessions the hook misses |
+| Close the workspace | `SessionEnd`, `WorktreeRemove` | **No.** Output discarded, 1.5s default budget (raisable to 60s per-hook). Backstop only. The kit's `session-end.py` is an **opt-in** use of it: wired by hand (the block is in the script's header), it copies the transcript, unencrypted and never purged, to `~/.claude/session-archive/<repo>/` (10 s timeout), because Claude Code deletes transcripts after `cleanupPeriodDays`; `settings.json` sets that to 3650 as the backstop for the sessions the hook misses |
 
 Two honest limits, both of which must be stated wherever this is adopted:
 
@@ -257,7 +257,7 @@ table exists to prevent. If you adopt the create-time gate as a `WorktreeCreate`
 
 ## Adopt it in this order
 
-Do not ship all of this at once — it is the "start tiny" rule applied to itself. Each
+Do not ship all of this at once: start small and let each piece prove itself. Each
 step is useful alone and earns the next:
 
 1. The issue tracker and the capture habit, by hand. **This alone fixes "issues get

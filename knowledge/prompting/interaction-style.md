@@ -82,5 +82,30 @@ session; noticed at the top of a turn, it costs one sentence.
 - Report against the goal, not the effort: "the objective is met / not met, and
   here's what's left", never a list of activity that implies progress.
 
-**Source:** our standing preferences — §1–2 (2026-06-02), §3–4 (2026-09-01).
+## 5. Decisions come as a briefing, not a list
+**Principle:** When the AI needs the user to decide something, each decision is a short
+briefing: what it is about and why it matters, the options with their trade-offs (cost,
+risk, what it locks in), and a recommendation with the reason. Ask it with the app's
+multiple-choice question tool where there is one (in Claude Code, `AskUserQuestion`), the
+recommended option first.
+
+**Why:** A list of numbered decisions with a section reference is only usable by someone
+who already understands the subject. The user owns the decision but not the domain; handed
+"1. Project names and .NET version — ask the tech lead", they have to go and read, or
+delegate blind, or approve without judging — and the human control point quietly stops
+working. It began when nine decisions were handed over by title at the end of a spec, and
+the owner asked for them "in layman's terms with context and recommendations", then for a
+rule so it never had to be asked again. Clicking a choice is also faster than typing one,
+and a question asked in the middle of a long reply gets missed.
+
+**How to apply:** For each decision, three parts in plain words: *what and why it
+matters* (one or two sentences, what breaks or costs if it goes wrong); *the options*
+with what each gives and gives up; *the recommendation* and its reason. Recommend even
+when the choice is technical — the recommendation is what a non-technical owner approves,
+and a named expert who has to confirm is told *what* they are confirming. Keep the whole
+briefing short enough to read in one sitting; if there are more than a handful of
+decisions, say which ones actually need thought and which are defaults to wave through.
+Never present a decision as a section number to go and read.
+
+**Source:** our standing preferences — §1–2 (2026-06-02), §3–4 (2026-09-01), §5 (2026-09-17).
 Active now, not pending the team workshop.

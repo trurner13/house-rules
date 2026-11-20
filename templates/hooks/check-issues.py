@@ -29,7 +29,7 @@ from pathlib import Path
 # machine vocabulary had no room for "being worked" / "remediation landed, not yet
 # verified" / "parked on purpose":
 #   open     -- acknowledged and being worked (or awaiting a slot / a ruling)
-#   fixed    -- remediation landed; verification (LOOK, drape-verify, ...) pending
+#   fixed    -- remediation landed; verification (LOOK, visual check, ...) pending
 #   deferred -- deliberately parked; next: says what brings it back
 # Status is ONE token from this list. Nuance goes in `- note:` or `- next:`, never
 # in the status line -- a gate that fights the work gets routed around.

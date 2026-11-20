@@ -50,7 +50,7 @@ Encode blocking conditions as executable checks:
   instruction files (owner's decision, 2026-11-07). Read a fresh clone's `.claude/`
   before opening it in an agent: its SessionStart hook runs the moment it opens.
 
-## The enforced flow (aspirational: a state machine)
+## The enforced flow (optional, not a rule: a state machine)
 
 Model the idea→merge lifecycle as states with legal transitions
 (`triage → classified → plan → approved → implementing → pr_open → releasing →

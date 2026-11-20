@@ -4,3 +4,6 @@
 
 # Claude Code per-session worktrees (isolated checkouts; never commit)
 .claude/worktrees/
+
+# Python bytecode, regenerated on every run
+__pycache__/

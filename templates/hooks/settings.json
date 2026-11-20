@@ -8,13 +8,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell",
+            "command": "uv",
             "args": [
-              "-NoProfile",
-              "-ExecutionPolicy",
-              "Bypass",
-              "-File",
-              "${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.ps1"
+              "run",
+              "--no-sync",
+              "python",
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.py"
             ],
             "timeout": 120
           }

@@ -62,6 +62,18 @@ are touched.
   programming knowledge in a rules file is paid for in every session and adds nothing.
   (Obstbaum.)
 
+## Optional practice: code outranks prose for what *is* (2026-11-10)
+
+Not a rule; taken forward from AI DevCon NYC at the owner's call. When the code and a
+document disagree about what the system *does*, the agent trusts the code, names the
+conflict in its report instead of picking silently, and the document is fixed or deleted. A
+document that keeps losing is a candidate for deletion at the next drift review. The spec
+still decides what is *intended*: a disagreement between code and spec is a bug or a spec
+change, never something the code wins by default. One vendor's two-week sample found 10% of
+13,700 suspected conflicts were real, and just over half of those were settled by checking
+the code, with wiki pages overruled most often
+([bockeler](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=6547s), 01:49:07).
+
 ## Adopted here: private memory holds nothing durable (2026-09-15)
 
 **Rule:** rules, conventions, decisions, preferences and gotchas live in the repo, as

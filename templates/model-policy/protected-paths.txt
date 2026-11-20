@@ -1,0 +1,9 @@
+# Paths the light-editor helper may never edit, from this repo's root (templates/model-policy/ in the guardrails repo).
+# A line ending in / is a folder and everything under it; any other line is a file or a wildcard (*, which crosses folders).
+# Case does not matter. Add this repo's own paths below these.
+.claude/
+.githooks/
+.github/
+CLAUDE.md
+scripts/
+agent-constraints/

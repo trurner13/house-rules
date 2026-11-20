@@ -112,9 +112,9 @@ It installs:
 |---|---|---|
 | The adopted rules | `.claude/rules/00-guardrails.md` | Auto-loaded by Claude Code every session |
 | Phase + cross-cutting conventions | `agent-constraints/*.md` | The operational "how", for the repo to adapt |
-| Session-start digest | `.claude/hooks/session-start.ps1` | Prints open issues, in-flight work, rules on trial and branches ahead of main into the agent's context |
-| Session-end archive (opt-in) | `.claude/hooks/session-end.ps1` | Laid down but not wired: when a repo adds the `SessionEnd` block from the script's header to `settings.json`, each transcript is copied to `~/.claude/session-archive/<repo>/` in the user's home folder. Off by default; it stores everything the agent read and ran, unencrypted, with no purge |
-| Hook wiring | `.claude/settings.json` | Fires the digest on `SessionStart`; sets `cleanupPeriodDays: 3650` and `disableSkillShellExecution: true` |
+| Session-start digest | `.claude/hooks/session-start.py` | Prints open issues, in-flight work, rules on trial and branches ahead of main into the agent's context |
+| Session-end archive (opt-in) | `.claude/hooks/session-end.py` | Laid down but not wired: when a repo adds the `SessionEnd` block from the script's header to `settings.json`, each transcript is copied to `~/.claude/session-archive/<repo>/` in the user's home folder. Off by default; it stores everything the agent read and ran, unencrypted, with no purge |
+| Hook wiring | `.claude/settings.json` | Fires the digest on `SessionStart` as `uv run --no-sync python <hook>.py` (uv is the one installer the kit needs); sets `cleanupPeriodDays: 3650` and `disableSkillShellExecution: true` |
 | Checkpoint format gate | `.githooks/commit-msg` | Rejects a `wip(...)` commit with no `Next-Step:` trailer |
 | Merge gate | `.githooks/pre-merge-commit` | Refuses an automatic merge that commits conflict markers or brings in config-scan hits |
 | Conflict gate | `.githooks/pre-commit` | Refuses to commit over an unresolved conflict or staged conflict markers |
@@ -211,8 +211,8 @@ git -C C:/<project> config core.hooksPath
 Must print `.githooks`. If it prints nothing the git hooks are inert and step 2 didn't
 finish.
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "C:/<project>/.claude/hooks/session-start.ps1"
+```bash
+uv run --no-sync python "C:/<project>/.claude/hooks/session-start.py"
 ```
 
 Must print a `=== work state (session-start reconciliation) ===` block listing the issue
@@ -255,15 +255,20 @@ because `git add -A` stages whatever `.gitignore` missed. The reasoning is recor
 > `git config core.hooksPath .githooks` once, or the git hooks silently do nothing.
 > Re-running `sync-guardrails.ps1 -Init` also sets it.
 
-> **Platform note:** the session-start digest is a PowerShell script (this is a Windows
-> setup). On macOS or Linux it needs a POSIX equivalent. The two *git* hooks are
-> `#!/bin/sh` and work everywhere, including Windows, because git ships its own shell.
+> **Platform note:** the two harness hooks are Python, launched as `uv run --no-sync
+> python <hook>.py`, so the only thing a machine needs installed is
+> [uv](https://docs.astral.sh/uv/), which fetches a Python if none is there. That holds on
+> Windows, Linux and macOS alike; the PowerShell versions were retired on 2026-10-30. The
+> two *git* hooks are `#!/bin/sh` and work everywhere, including Windows, because git
+> ships its own shell.
 
 ### If the repo already has a `.claude/settings.json`
 
 The script will not touch it — merging JSON blindly would clobber your permissions and
 env settings. It prints a `!` notice instead; copy the `SessionStart` block from
-`templates/hooks/settings.json` into your existing file by hand.
+`templates/hooks/settings.json` into your existing file by hand. The `SessionEnd`
+transcript archive is opt-in: its block is in the header of `session-end.py`, with what it
+stores, for a repo that chooses to wire it.
 
 **Expect that same `!` on every re-run**, including on a repo the script set up itself.
 It only checks whether the file exists, not whether the hook is already wired. If your

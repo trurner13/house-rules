@@ -6,7 +6,8 @@ files that aren't phases at all: the session boundary and the issue tracker. Cop
 folder into a new repo (under `agent-constraints/` or fold into `.claude/rules/`) and
 adapt per repo. The lean `CLAUDE.md` points the agent at these for the relevant phase.
 
-Treat the flow as an **enforced state machine** where it's worth it: illegal phase
+Optionally, treat the flow as an **enforced state machine** (an idea, not a rule: it was
+retired as a rule on 2026-11-20 until parallel agents make skipped steps a real problem): illegal phase
 jumps fail and state persists across sessions (aspirational for a solo repo — start
 as a checklist, harden later). See `verification-and-gates.md` for the gates that
 must pass before merge.
