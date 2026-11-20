@@ -13,7 +13,9 @@
     - with no template history to prove a file stale, nothing is overwritten;
     - a guardrails checkout behind origin/main is refused (also as a dry run) and
       writes nothing, unless -AllowStale; a branch ahead of main passes; offline, it
-      compares with the last-fetched origin/main.
+      compares with the last-fetched origin/main;
+    - a target still carrying a retired PowerShell hook gets its Python successor on a
+      plain run and is told to switch settings.json; the old file is not deleted.
   Exits 1 on any failure. Never touches a real repo.
 #>
 $ErrorActionPreference = 'Stop'
@@ -59,7 +61,7 @@ try {
   Put (Join-Path $guard 'templates/agent-constraints/README.md') "constraints`n"
   Put (Join-Path $guard 'templates/hooks/pre-commit') "#!/bin/sh`necho pre-commit v1`n"
   Put (Join-Path $guard 'templates/hooks/check-issues.py') "CAP = 60  # v1`n"
-  Put (Join-Path $guard 'templates/hooks/session-start.ps1') "'session v1'`n"
+  Put (Join-Path $guard 'templates/hooks/session-start.py') "'session v1'`n"
   Put (Join-Path $guard 'templates/hooks/commit-msg') "#!/bin/sh`necho msg v1`n"
   Put (Join-Path $guard 'templates/hooks/settings.json') "{}`n"
   New-Item -ItemType Directory -Force -Path (Join-Path $guard 'scripts') | Out-Null
@@ -69,7 +71,7 @@ try {
   TGit $guard commit -q -m v1
   Put (Join-Path $guard 'templates/hooks/pre-commit') "#!/bin/sh`necho pre-commit v2`n"
   Put (Join-Path $guard 'templates/hooks/check-issues.py') "CAP = 60  # v2`n"
-  Put (Join-Path $guard 'templates/hooks/session-start.ps1') "'session v2'`n"
+  Put (Join-Path $guard 'templates/hooks/session-start.py') "'session v2'`n"
   TGit $guard add -A
   TGit $guard commit -q -m v2
   # A third version that only exists in the working copy (uncommitted) is the current one.
@@ -79,7 +81,7 @@ try {
   $t = Join-Path $tmp 'target'
   Put (Join-Path $t '.githooks/pre-commit') "#!/bin/sh`r`necho pre-commit v1`r`n"      # v1, CRLF checkout: unchanged
   Put (Join-Path $t 'scripts/check-issues.py') "CAP = 210  # v1, raised here`n"        # adapted
-  Put (Join-Path $t '.claude/hooks/session-start.ps1') "'session v1'`n'our extra gate'`n" # adapted
+  Put (Join-Path $t '.claude/hooks/session-start.py') "'session v1'`n'our extra gate'`n" # adapted
   Put (Join-Path $t '.githooks/commit-msg') ([char]0xFEFF + "#!/bin/sh`necho msg v1`n")  # v1 with a BOM: unchanged
   Put (Join-Path $t '.claude/rules/00-guardrails.md') "hand edited - must be replaced`n"
   Put (Join-Path $t 'agent-constraints/README.md') "our own constraints`n"
@@ -104,7 +106,7 @@ try {
   Check ((Text (Join-Path $t '.githooks/pre-commit')) -ceq "#!/bin/sh`necho pre-commit v2`n") "unchanged vendored file (CRLF) is refreshed"
   Check ((Text (Join-Path $t '.githooks/commit-msg')) -ceq "#!/bin/sh`necho msg v2`n") "unchanged vendored file (BOM) is refreshed to an uncommitted current template"
   Check ((Text (Join-Path $t 'scripts/check-issues.py')) -ceq "CAP = 210  # v1, raised here`n") "adapted check script is left alone"
-  Check ((Text (Join-Path $t '.claude/hooks/session-start.ps1')) -ceq "'session v1'`n'our extra gate'`n") "adapted session hook is left alone"
+  Check ((Text (Join-Path $t '.claude/hooks/session-start.py')) -ceq "'session v1'`n'our extra gate'`n") "adapted session hook is left alone"
   Check ($r.out -match 'WARNING: 2 adapted file\(s\) were LEFT ALONE') "plain run warns about both adapted files"
   $rules = [IO.File]::ReadAllText((Join-Path $t '.claude/rules/00-guardrails.md'))
   Check ($rules -match '# Rules v1' -and $rules -match 'VENDORED') "rules file is written over a hand edit"
@@ -120,7 +122,7 @@ try {
   $r = Run-Sync $guard $t @('-Init')
   Check ($r.code -eq 0) "-Init exits 0"
   Check ((Text (Join-Path $t 'scripts/check-issues.py')) -ceq "CAP = 210  # v1, raised here`n") "-Init leaves the adapted check script alone"
-  Check ((Text (Join-Path $t '.claude/hooks/session-start.ps1')) -ceq "'session v1'`n'our extra gate'`n") "-Init leaves the adapted session hook alone"
+  Check ((Text (Join-Path $t '.claude/hooks/session-start.py')) -ceq "'session v1'`n'our extra gate'`n") "-Init leaves the adapted session hook alone"
   Check ($r.out -match 'WARNING: 2 adapted file\(s\) were LEFT ALONE') "-Init warns about both adapted files"
   Check (Test-Path (Join-Path $t 'issues/archive/.gitkeep')) "-Init lays down the tracker"
 
@@ -205,6 +207,24 @@ try {
   TGit $g checkout -q --orphan unborn
   $r = Run-Sync $g $s @()
   Check ($r.code -eq 1 -and $r.out -match 'REFUSED - this copy of the guardrails is possibly behind') "when git cannot compare, it refuses"
+
+  # 8. A retired predecessor. The target was onboarded with the PowerShell digest and
+  #    has no Python one: a PLAIN run lays the successor down, names the old file, and
+  #    leaves it (settings.json may still point at it).
+  $p = Join-Path $tmp 'target-retired'
+  Put (Join-Path $p '.claude/hooks/session-start.ps1') "'old powershell digest'`n"
+  TGit $p init -q
+  TGit $p add -A
+  TGit $p commit -q -m vendored
+  $r = Run-Sync $guard $p @('-DryRun')
+  Check ($r.code -eq 0 -and $r.out -match 'would add \.claude/hooks/session-start\.py') "dry run says it would lay down the successor of a retired hook"
+  Check (-not (Test-Path (Join-Path $p '.claude/hooks/session-start.py'))) "dry run does not lay it down"
+  $r = Run-Sync $guard $p @()
+  Check ($r.code -eq 0 -and (Test-Path (Join-Path $p '.claude/hooks/session-start.py'))) "a plain run lays down the successor beside a retired hook"
+  Check ((Text (Join-Path $p '.claude/hooks/session-start.py')) -ceq "'session v2'`n") "the successor is the current template"
+  Check ((Text (Join-Path $p '.claude/hooks/session-start.ps1')) -ceq "'old powershell digest'`n") "the retired hook is left in place"
+  Check ($r.out -match 'RETIRED: 1 PowerShell hook\(s\)' -and $r.out -match 'session-start\.ps1') "the retired hook is named, with the switch to make"
+  Check (-not (Test-Path (Join-Path $p '.githooks/pre-commit'))) "a plain run still lays down nothing else"
 } finally {
   if (Test-Path $tmp) { Remove-Item -Recurse -Force $tmp }
 }

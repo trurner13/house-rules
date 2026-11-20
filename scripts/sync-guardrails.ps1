@@ -190,15 +190,23 @@ function Get-KnownKeys([string]$name) {
 }
 
 $adaptedKept = @()
+$retiredSeen = @()
 # One vendored machinery file. Missing: laid down only when -Init asks. Present:
 # 'current' (nothing to do), 'stale' (an old template version - refreshed) or
 # 'adapted' (changed in the target - left alone, warned about).
-function Sync-Machinery([string]$name, [string]$rel, [bool]$createIfMissing) {
+# $pred names a RETIRED predecessor (the PowerShell hook a Python one replaced,
+# 2026-10-30). A target that still carries it was onboarded for this hook, so the
+# successor is laid down on a plain run too, and the old file is named at the end so
+# settings.json gets switched to it. The old file is never deleted here: settings.json
+# may still point at it, and that file is the repo's own.
+function Sync-Machinery([string]$name, [string]$rel, [bool]$createIfMissing, [string]$pred = '') {
   $source = Join-Path $hookSrc $name
   $target = Join-Path $Repo $rel
   if (-not (Test-Path $source)) { return }
+  $hasPred = ($pred -ne '') -and (Test-Path (Join-Path $Repo $pred))
+  if ($hasPred) { $script:retiredSeen += $pred }
   if (-not (Test-Path $target)) {
-    if (-not $createIfMissing) { return }   # not onboarded for this file; -Init's job
+    if (-not $createIfMissing -and -not $hasPred) { return }   # not onboarded for this file; -Init's job
     if ($DryRun) { Write-Host "  would add $rel"; return }
     $parent = Split-Path -Parent $target
     if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
@@ -318,8 +326,11 @@ if ($acExists -or ($Init -and $DryRun)) {
 # repos do adapt a hook (one repo raised its issue cap; three repos fixed a merge-hook
 # lint error; another added a gate), and a re-sync must never undo that.
 $machinery = @(
-  @{ src = 'session-start.ps1';  dst = '.claude/hooks/session-start.ps1' },
-  @{ src = 'session-end.ps1';    dst = '.claude/hooks/session-end.ps1' },
+  # The two harness hooks are Python (2026-10-30), run as `uv run --no-sync python`, so
+  # the kit loads on Linux and macOS as well as Windows. Each names the PowerShell file
+  # it replaced (see Sync-Machinery).
+  @{ src = 'session-start.py';   dst = '.claude/hooks/session-start.py'; pred = '.claude/hooks/session-start.ps1' },
+  @{ src = 'session-end.py';     dst = '.claude/hooks/session-end.py';   pred = '.claude/hooks/session-end.ps1' },
   @{ src = 'commit-msg';         dst = '.githooks/commit-msg' },
   @{ src = 'pre-commit';         dst = '.githooks/pre-commit' },
   # conflict-scan.sh is SOURCED by both hooks; pre-merge-commit closes the auto-merge
@@ -332,7 +343,7 @@ $machinery = @(
   @{ src = 'check-committed.py'; dst = 'scripts/check-committed.py' }
 )
 Write-Host "Machinery:"
-foreach ($m in $machinery) { Sync-Machinery $m.src $m.dst ([bool]$Init) }
+foreach ($m in $machinery) { Sync-Machinery $m.src $m.dst ([bool]$Init) ([string]$m.pred) }
 
 # --- the rest of the kit (-Init only) ---------------------------------------------
 # Rules and constraint files are INSTRUCTIONS: the agent reads them and may or may not
@@ -341,18 +352,18 @@ foreach ($m in $machinery) { Sync-Machinery $m.src $m.dst ([bool]$Init) }
 if ($Init) {
   Write-Host "Kit (-Init):"
 
-  # Wire the SessionStart digest. Only written when the repo has no settings.json -
-  # merging JSON blindly would clobber a repo's own permissions/env, so we print the
-  # snippet instead.
+  # Wire the SessionStart digest and the SessionEnd archive. Only written when the repo
+  # has no settings.json - merging JSON blindly would clobber a repo's own
+  # permissions/env, so we print the snippet instead.
   $settingsDst = Join-Path $Repo '.claude/settings.json'
   if (Test-Path $settingsDst) {
-    Write-Host "  ! .claude/settings.json exists - NOT modified. Add the SessionStart hook by hand:"
-    Write-Host "      see templates/hooks/settings.json in the guardrails repo"
+    Write-Host "  ! .claude/settings.json exists - NOT modified. Add the SessionStart and SessionEnd hooks by hand:"
+    Write-Host "      see templates/hooks/settings.json in the guardrails repo (uv run --no-sync python <hook>.py)"
   } elseif ($DryRun) {
-    Write-Host "  would add .claude/settings.json (SessionStart wiring)"
+    Write-Host "  would add .claude/settings.json (SessionStart + SessionEnd wiring)"
   } else {
     Copy-Item -Path (Join-Path $hookSrc 'settings.json') -Destination $settingsDst
-    Write-Host "  + .claude/settings.json (SessionStart wiring)"
+    Write-Host "  + .claude/settings.json (SessionStart + SessionEnd wiring)"
   }
 
   # The issue tracker.
@@ -433,6 +444,15 @@ if ($adaptedKept.Count -gt 0) {
   Write-Host "  To take an upstream fix, merge it by hand: compare with templates/hooks/ here."
 }
 
+if ($retiredSeen.Count -gt 0) {
+  Write-Host ""
+  Write-Host ("RETIRED: " + $retiredSeen.Count + " PowerShell hook(s) the template no longer ships: " + ($retiredSeen -join ', ')) -ForegroundColor Yellow
+  Write-Host "  The Python successor goes beside each (above). Point .claude/settings.json at it -"
+  Write-Host "  templates/hooks/settings.json shows the launcher, 'uv run --no-sync python <hook>.py',"
+  Write-Host "  which needs only uv installed, on Windows or Linux - then delete the .ps1 and commit."
+  Write-Host "  settings.json is the repo's own, so this script never edits it."
+}
+
 # --- did any of it actually reach version control? --------------------------------
 # A blanket '.claude/' (or 'issues/', or '*.py') in the target's .gitignore turns this
 # whole script into a no-op that reports success: every file exists on THIS machine and
@@ -453,7 +473,8 @@ try {
     if ($Init) {
       $mustReachGit += @(
         '.claude/settings.json',
-        '.claude/hooks/session-start.ps1',
+        '.claude/hooks/session-start.py',
+        '.claude/hooks/session-end.py',
         '.githooks/commit-msg',
         '.githooks/pre-commit',
         'scripts/check-issues.py',
