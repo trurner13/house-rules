@@ -80,23 +80,60 @@ def time_left(cap: float) -> float:
     return max(0.0, min(cap, DEADLINE - time.monotonic()))
 
 
-def stop_out_of_time() -> None:
-    """Out of time: stop here and say so.
+def stop_incomplete(reason: str) -> None:
+    """A git call could not be answered in time: stop here and say why.
 
     Every section after a skipped or killed git call would rest on missing data (a false
     "nothing to report", a wrong day count), so none is printed: the digest ends here.
     """
     out("")
-    out("DIGEST INCOMPLETE: the time budget ran out, so the checks after this point were not "
-        "run. Check `git status` and `git log --branches --not --remotes` by hand.")
+    out(f"DIGEST INCOMPLETE: {reason}, so the checks after this point were not run. "
+        "Check `git status` and `git log --branches --not --remotes` by hand.")
     out("=== end work state ===")
     sys.exit(0)
+
+
+def run_bounded(cmd: list[str], timeout: float) -> tuple[int, str]:
+    """Run cmd and return (exit code, stdout) within `timeout` seconds, or raise TimeoutExpired.
+
+    subprocess.run(timeout=...) is not enough: on Windows, after killing the program it waits
+    for the output pipes with no limit, and a launcher (Git for Windows' git.exe, the npm
+    claude.cmd) leaves a second process holding them, so the hook hangs anyway. Output goes
+    to temporary files instead of pipes, so nothing can hold this process open, and on a
+    timeout the whole process tree is killed.
+    """
+    import tempfile
+
+    win = sys.platform == "win32"
+    with tempfile.TemporaryFile() as fout, tempfile.TemporaryFile() as ferr:
+        kw = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if win else {"start_new_session": True}
+        proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=fout, stderr=ferr, **kw)
+        try:
+            code = proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            try:
+                if win:
+                    taskkill = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "taskkill.exe")
+                    subprocess.run([taskkill, "/T", "/F", "/PID", str(proc.pid)], stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+                else:
+                    os.killpg(proc.pid, 9)
+            except (OSError, subprocess.SubprocessError):
+                pass
+            try:
+                proc.kill()
+                proc.wait(timeout=2)
+            except (OSError, subprocess.SubprocessError):
+                pass
+            raise
+        fout.seek(0)
+        return code, fout.read().decode("utf-8", errors="replace")
 
 
 def git(*args: str, cwd: Path | str | None = None, first: bool = False) -> str:
     """Run git and return its stdout, or '' on any failure or timeout (nothing to report).
 
-    A call that would be skipped or is killed for time ends the digest (stop_out_of_time),
+    A call that would be skipped or is killed for time ends the digest (stop_incomplete),
     so a missing answer is never passed off as "nothing to report".
     """
     if GIT is None:
@@ -105,23 +142,22 @@ def git(*args: str, cwd: Path | str | None = None, first: bool = False) -> str:
     # digest at all, and "out of time" would be misreported as "not a git repository".
     budget = GIT_TIMEOUT if first else time_left(GIT_TIMEOUT)
     if budget < 1:
-        stop_out_of_time()
+        stop_incomplete("the digest's time budget ran out")
     cmd = [GIT]
     if cwd is not None:
         cmd += ["-C", str(cwd)]
     cmd += list(args)
     try:
-        res = subprocess.run(
-            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-            timeout=budget,
-        )
+        code, stdout = run_bounded(cmd, budget)
     except subprocess.TimeoutExpired:
-        stop_out_of_time()
+        if time_left(1) < 1:
+            stop_incomplete("the digest's time budget ran out")
+        stop_incomplete(f"`git {args[0] if args else ''}` took longer than {budget:.0f} s")
     except (OSError, ValueError):
         return ""
-    if res.returncode != 0:
+    if code != 0:
         return ""
-    return res.stdout
+    return stdout
 
 
 def git_lines(*args: str, cwd: Path | str | None = None) -> list[str]:
@@ -324,19 +360,16 @@ if stash:
 claude_exe = find_exe("claude")
 cv = ""
 if claude_exe:
+    # Only a version line: a slow answer skips this line, never the branch table after it.
     budget = time_left(10)
-    if budget < 1:
-        stop_out_of_time()
-    try:
-        res = subprocess.run(
-            [claude_exe, "--version"], capture_output=True, text=True,
-            encoding="utf-8", errors="replace", timeout=budget,
-        )
-        cv = next((ln for ln in res.stdout.splitlines() if ln != ""), "")
-    except subprocess.TimeoutExpired:
-        stop_out_of_time()
-    except (OSError, ValueError):
-        cv = ""
+    if budget >= 1:
+        try:
+            _, stdout = run_bounded([claude_exe, "--version"], budget)
+            cv = next((ln for ln in stdout.splitlines() if ln != ""), "")
+        except subprocess.TimeoutExpired:
+            cv = "version not checked (`claude --version` was too slow)"
+        except (OSError, ValueError):
+            cv = ""
 if cv:
     emit(["", f"CLAUDE CODE: {cv}"])
 

@@ -13,6 +13,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 import sys
 import tempfile
 from pathlib import Path
@@ -232,6 +233,35 @@ def main() -> int:
                              capture_output=True, text=True, encoding="utf-8", env=env, check=False)
         expect("session-end: a missing transcript is a no-op, exit 0",
                res.returncode == 0 and not (home / ".claude" / "session-archive" / "quiet" / "nope.jsonl").exists(), res.stderr)
+
+        # --- 6. run_bounded: a timed-out program whose child holds the output can't hang the hook ---
+        # Both hooks carry the same run_bounded; check they are identical, then test one copy.
+        import ast
+        import importlib.util
+
+        def func_src(path: Path, name: str) -> str:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            return next(ast.dump(n) for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == name)
+
+        expect("run_bounded: identical in session-start.py and session-end.py",
+               func_src(HOOKS / "session-start.py", "run_bounded") == func_src(HOOKS / "session-end.py", "run_bounded"))
+        spec = importlib.util.spec_from_file_location("session_end_under_test", HOOKS / "session-end.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        holder = ("import subprocess, sys, time; "
+                  "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(15)']); "
+                  "print('started', flush=True); time.sleep(15)")
+        t0 = time.monotonic()
+        timed_out = False
+        try:
+            mod.run_bounded([sys.executable, "-c", holder], 1)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+        took = time.monotonic() - t0
+        expect(f"run_bounded: a program with an output-holding child times out promptly ({took:.1f} s)",
+               timed_out and took < 10, f"timed_out={timed_out} took={took:.1f}s")
+        code, text = mod.run_bounded([sys.executable, "-c", "print('ok')"], 10)
+        expect("run_bounded: a quick program returns its exit code and output", code == 0 and text.strip() == "ok", text)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

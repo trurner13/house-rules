@@ -74,6 +74,43 @@ def find_exe(name: str) -> str | None:
     return None
 
 
+def run_bounded(cmd: list[str], timeout: float) -> tuple[int, str]:
+    """Run cmd and return (exit code, stdout) within `timeout` seconds, or raise TimeoutExpired.
+
+    subprocess.run(timeout=...) is not enough: on Windows, after killing the program it waits
+    for the output pipes with no limit, and a launcher (Git for Windows' git.exe, the npm
+    claude.cmd) leaves a second process holding them, so the hook hangs anyway. Output goes
+    to temporary files instead of pipes, so nothing can hold this process open, and on a
+    timeout the whole process tree is killed.
+    """
+    import tempfile
+
+    win = sys.platform == "win32"
+    with tempfile.TemporaryFile() as fout, tempfile.TemporaryFile() as ferr:
+        kw = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if win else {"start_new_session": True}
+        proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=fout, stderr=ferr, **kw)
+        try:
+            code = proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            try:
+                if win:
+                    taskkill = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "taskkill.exe")
+                    subprocess.run([taskkill, "/T", "/F", "/PID", str(proc.pid)], stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+                else:
+                    os.killpg(proc.pid, 9)
+            except (OSError, subprocess.SubprocessError):
+                pass
+            try:
+                proc.kill()
+                proc.wait(timeout=2)
+            except (OSError, subprocess.SubprocessError):
+                pass
+            raise
+        fout.seek(0)
+        return code, fout.read().decode("utf-8", errors="replace")
+
+
 def main() -> int:
     raw = sys.stdin.read()
     if not raw.strip():
@@ -102,12 +139,9 @@ def main() -> int:
             # relative to `here` on some git versions and absolute on others, so resolve it
             # against `here`. (--path-format=absolute is not used: git before 2.31 echoes an
             # unknown rev-parse option back with exit 0 instead of failing.)
-            res = subprocess.run(
-                [git_exe, "-C", str(here), "rev-parse", "--git-common-dir"],
-                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5,
-            )
-            out = res.stdout.strip()
-            if res.returncode == 0 and out and "\n" not in out:
+            code, stdout = run_bounded([git_exe, "-C", str(here), "rev-parse", "--git-common-dir"], 5)
+            out = stdout.strip()
+            if code == 0 and out and "\n" not in out:
                 common = (here / out).resolve()
                 name = common.parent.name if common.name == ".git" else common.name
                 if name and re.fullmatch(r"[^\x00-\x1f/\\]+", name):
