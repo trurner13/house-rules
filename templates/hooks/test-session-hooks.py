@@ -87,8 +87,11 @@ def main() -> int:
         expect("quiet repo: frame, 'none recorded', unpushed (no remote), end marker, in order", ok, why or out)
         expect("quiet repo: no UNCOMMITTED section on a clean tree", "UNCOMMITTED:" not in out, out)
         expect("quiet repo: no issue section when issues/ is absent", "MALFORMED" not in out and "OPEN ISSUES (" not in out, out)
+        # git older than 2.41 prints "BRANCHES AHEAD OF main: not computed": a notice, not a
+        # section, so it is allowed here (the test must pass on any supported git).
+        quiet_out = "\n".join(ln for ln in out.splitlines() if "not computed (git 2.41+" not in ln)
         expect("quiet repo: no trial, checkpoint or branch sections", not any(
-            s in out for s in ("TRIAL REVIEW OVERDUE", "RULES ON TRIAL", "BRANCHES PARKED", "BRANCHES AHEAD OF", "STASHES")), out)
+            s in quiet_out for s in ("TRIAL REVIEW OVERDUE", "RULES ON TRIAL", "BRANCHES PARKED", "BRANCHES AHEAD OF", "STASHES")), out)
 
         # --- 2. a busy repo: every section fires, in the documented order ----------------
         busy = new_repo(tmp, "busy")
@@ -163,6 +166,18 @@ def main() -> int:
             res = sh(tmp, sys.executable, "-I", str(loose / "session-start.py"))
             expect("not a repo: exit 0 and says so", res.returncode == 0 and "is not inside a git repository" in res.stdout, res.stdout + res.stderr)
 
+        # --- 4b. trial reviews: "On trial" as the LAST section, and an undated item ---
+        trials = new_repo(tmp, "trials")
+        write(trials, "TODO.md",
+              "# TODO\n\n## On trial in a repo\n\n"
+              "- [~] **Undated trial** - no review date yet.\n"
+              "- [~] **Dated trial** - Review 2020-02-02.\n")
+        git(trials, "add", "-A")
+        git(trials, "commit", "-q", "-m", "init")
+        code, out, err = digest(trials)
+        expect("trials: a last 'On trial' section is still read", "Dated trial: review was due 2020-02-02" in out, out)
+        expect("trials: an undated item never borrows the next item's date", "Undated trial:" not in out, out)
+
         # --- 5. session-end: the transcript is copied under <home>/.claude/session-archive/<repo>/ ---
         home = tmp / "home"
         home.mkdir()
@@ -181,6 +196,14 @@ def main() -> int:
         res = subprocess.run([sys.executable, "-I", str(quiet / ".claude" / "hooks" / "session-end.py")],
                              input="", capture_output=True, text=True, encoding="utf-8", env=env, check=False)
         expect("session-end: empty stdin is a no-op, exit 0", res.returncode == 0, res.stderr)
+        res = subprocess.run([sys.executable, "-I", str(quiet / ".claude" / "hooks" / "session-end.py")],
+                             input=json.dumps({"session_id": "../../escape", "transcript_path": str(transcript)}),
+                             capture_output=True, text=True, encoding="utf-8", env=env, check=False)
+        expect("session-end: an unsafe session id never writes outside the archive",
+               res.returncode == 0
+               and not (home / ".claude" / "escape.jsonl").exists()
+               and not (home / "escape.jsonl").exists()
+               and (home / ".claude" / "session-archive" / "quiet" / "transcript.jsonl").is_file(), res.stderr)
         res = subprocess.run([sys.executable, "-I", str(quiet / ".claude" / "hooks" / "session-end.py")],
                              input=json.dumps({"session_id": "nope", "transcript_path": str(tmp / "missing.jsonl")}),
                              capture_output=True, text=True, encoding="utf-8", env=env, check=False)

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import contextlib
 import math
+import os
 import re
 import shutil
 import subprocess
@@ -40,17 +41,44 @@ def out(line: str) -> None:
     print(line, flush=True)
 
 
+def find_exe(name: str) -> str | None:
+    """Find a program on PATH only, never in the current directory.
+
+    On Windows, starting a bare "git" also searches the current directory first, and a
+    hook's current directory is the repo: a cloned repo carrying its own git.exe would
+    run at session start. So the path is resolved here, from absolute PATH entries only.
+    """
+    win = sys.platform == "win32"
+    exts = [e for e in os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") if e] if win else [""]
+    for d in os.environ.get("PATH", "").split(os.pathsep):
+        d = d.strip().strip('"')
+        if not d or not os.path.isabs(d):
+            continue
+        for ext in exts:
+            p = os.path.join(d, name + ext)
+            if os.path.isfile(p) and (win or os.access(p, os.X_OK)):
+                return p
+    return None
+
+
+GIT = find_exe("git")
+GIT_TIMEOUT = 20  # seconds per call; the whole hook has 120
+
+
 def git(*args: str, cwd: Path | str | None = None) -> str:
-    """Run git and return its stdout, or '' on any failure (nothing to report)."""
-    cmd = ["git"]
+    """Run git and return its stdout, or '' on any failure or timeout (nothing to report)."""
+    if GIT is None:
+        return ""
+    cmd = [GIT]
     if cwd is not None:
         cmd += ["-C", str(cwd)]
     cmd += list(args)
     try:
         res = subprocess.run(
-            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace"
+            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=GIT_TIMEOUT,
         )
-    except (OSError, ValueError):
+    except (OSError, ValueError, subprocess.TimeoutExpired):
         return ""
     if res.returncode != 0:
         return ""
@@ -119,23 +147,24 @@ now = datetime.now(UTC)
 todo = root / "TODO.md"
 if todo.is_file():
     text = read_text(todo)
-    sec = re.search(r"## On trial.*?(?=\r?\n## )", text, re.S | re.I)
+    sec = re.search(r"## On trial.*?(?=\r?\n## |\Z)", text, re.S | re.I)
     if sec:
         section = sec.group(0)
         overdue = []
-        for m in re.finditer(
-            r"- \[.\] \*\*(?P<name>[^*]+)\*\*.*?Review (?P<date>\d{4}-\d{2}-\d{2})",
-            section,
-            re.S,
-        ):
+        # One item at a time, so an item with no review date never borrows the next one's.
+        for item in re.split(r"\r?\n(?=- \[.\] )", section):
+            m = re.match(r"- \[.\] \*\*(?P<name>[^*]+)\*\*", item)
+            d = re.search(r"Review (?P<date>\d{4}-\d{2}-\d{2})", item)
+            if not m or not d:
+                continue
             try:
-                due = date.fromisoformat(m.group("date"))
+                due = date.fromisoformat(d.group("date"))
             except ValueError:
                 continue
             if due <= today:
                 name = m.group("name").strip()
                 overdue.append(
-                    f"  {name}: review was due {m.group('date')} ({(today - due).days} day(s) ago)"
+                    f"  {name}: review was due {d.group('date')} ({(today - due).days} day(s) ago)"
                 )
         if overdue:
             emit(['TRIAL REVIEW OVERDUE (TODO.md, "On trial"): the first decision of this '
@@ -253,9 +282,7 @@ if stash:
 # --- 7. the tool itself ------------------------------------------------------
 # Guardrails that depend on a Claude Code version (hooks that fail closed, path-scoped
 # rules, the worktree sweep) silently do not apply on an older build. Say which one runs.
-claude_exe = shutil.which("claude")
-if claude_exe is None and sys.platform == "win32":
-    claude_exe = shutil.which("claude.cmd")
+claude_exe = find_exe("claude")
 cv = ""
 if claude_exe:
     try:

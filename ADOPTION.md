@@ -265,8 +265,10 @@ because `git add -A` stages whatever `.gitignore` missed. The reasoning is recor
 ### If the repo already has a `.claude/settings.json`
 
 The script will not touch it — merging JSON blindly would clobber your permissions and
-env settings. It prints a `!` notice instead; copy the `SessionStart` and `SessionEnd`
-blocks from `templates/hooks/settings.json` into your existing file by hand.
+env settings. It prints a `!` notice instead; copy the `SessionStart` block from
+`templates/hooks/settings.json` into your existing file by hand. The `SessionEnd`
+transcript archive is opt-in: its block is in the header of `session-end.py`, with what it
+stores, for a repo that chooses to wire it.
 
 **Expect that same `!` on every re-run**, including on a repo the script set up itself.
 It only checks whether the file exists, not whether the hook is already wired. If your

@@ -9,6 +9,10 @@ on:
     branches: [main]
   pull_request:
 
+# Read-only token: the gates read the repo and write nothing back.
+permissions:
+  contents: read
+
 jobs:
   gates:
     runs-on: ubuntu-latest

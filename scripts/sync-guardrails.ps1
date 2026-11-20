@@ -448,9 +448,13 @@ if ($adaptedKept.Count -gt 0) {
 if ($retiredSeen.Count -gt 0) {
   Write-Host ""
   Write-Host ("RETIRED: " + $retiredSeen.Count + " PowerShell hook(s) the template no longer ships: " + ($retiredSeen -join ', ')) -ForegroundColor Yellow
-  Write-Host "  The Python successor goes beside each (above). Point .claude/settings.json at it -"
-  Write-Host "  templates/hooks/settings.json shows the launcher, 'uv run --no-sync python <hook>.py',"
-  Write-Host "  which needs only uv installed, on Windows or Linux - then delete the .ps1 and commit."
+  Write-Host "  The Python successor goes beside each (above). For session-start, point"
+  Write-Host "  .claude/settings.json at it - templates/hooks/settings.json shows the launcher,"
+  Write-Host "  'uv run --no-sync python <hook>.py', which needs only uv installed, on Windows, Linux"
+  Write-Host "  or macOS - then delete the .ps1 and commit."
+  Write-Host "  For session-end, the transcript archive is OPT-IN: it keeps every transcript in full,"
+  Write-Host "  unencrypted, with no purge. Wire session-end.py only if you want that (the block is in"
+  Write-Host "  its header); otherwise remove the old SessionEnd block and session-end.ps1."
   Write-Host "  settings.json is the repo's own, so this script never edits it."
 }
 
