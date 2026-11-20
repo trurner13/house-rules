@@ -31,10 +31,10 @@
   So: `-Init` once to lay down the full kit; plain runs afterwards to re-sync the
   rules when rules/RULES.md changes. A plain run is safe to run blind.
 .EXAMPLE
-  ./scripts/sync-guardrails.ps1 -Repo C:\Source\MyRepo -Init     # first-time: full kit
-  ./scripts/sync-guardrails.ps1 -Repo C:\Source\MyRepo -DryRun   # what would change?
-  ./scripts/sync-guardrails.ps1 -Repo C:\Source\MyRepo           # later: re-sync
-  ./scripts/sync-guardrails.ps1 -Repo C:\Source\MyRepo -AllowStale  # behind origin/main, knowingly
+  ./scripts/sync-guardrails.ps1 -Repo C:\code\my-repo -Init     # first-time: full kit
+  ./scripts/sync-guardrails.ps1 -Repo C:\code\my-repo -DryRun   # what would change?
+  ./scripts/sync-guardrails.ps1 -Repo C:\code\my-repo           # later: re-sync
+  ./scripts/sync-guardrails.ps1 -Repo C:\code\my-repo -AllowStale  # behind origin/main, knowingly
 #>
 param(
   [Parameter(Mandatory = $true)] [string]$Repo,

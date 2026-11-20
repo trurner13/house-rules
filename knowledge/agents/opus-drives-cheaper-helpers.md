@@ -30,9 +30,9 @@ Its limits:
   correct result for that kind of job looks like. Without one, a saving and a silent drop in
   quality look the same. Tessl cut its cost per PR from about $75 to $13 this way, by its own
   account, and only after the checks existed
-  ([podjarny](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=2776s),
-  01:05:56); Steve Yegge uses one check per job type to decide whether a cheaper model
-  qualifies ([yegge](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=30267s), 08:33:18).
+  ([podjarny](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=3956s),
+  ); Steve Yegge uses one check per job type to decide whether a cheaper model
+  qualifies ([yegge](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=30798s), ).
 
 ## How to apply
 
@@ -77,8 +77,8 @@ every helper, and the limits are enforced. The kit is [templates/model-policy/](
 - **Streams and whole sessions stay on Opus.** A session always has a shell, and it cannot change its own model.
 - **The cost:** test runs, branch updates and builds stay on Opus too, so this saves less than the looser policy.
 
-Review found the same mistake twice in protected lists written from memory: the live script a brand's page loads was left
-open. Protect every script and template in any folder, then check the list against real files.
+Review found the same mistake twice in protected lists written from memory: a live script that customers' pages load was
+left open. Protect every script and template in any folder, then check the list against real files.
 
 ## What to measure
 

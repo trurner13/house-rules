@@ -1,6 +1,7 @@
 # Triage names the model for each helper
 
-On trial from YYYY-MM-DD, from the guardrails' optional kit `templates/model-policy/`. Review date: YYYY-MM-DD.
+In force from YYYY-MM-DD, from the guardrails' optional kit `templates/model-policy/`; it enforces the rule *Triage the
+models and agents for each job*.
 
 The session stays on Opus. It cannot change its own model, so triage decides for the helpers it starts.
 
@@ -13,8 +14,9 @@ The session stays on Opus. It cannot change its own model, so triage decides for
 |---|---|---|
 | `haiku` | `scout` | Find files, summarise long logs and test output, list issues. No editing, no shell |
 | `sonnet` | `light-editor` | Wording, docs, copy, look-and-feel edits and tidying issues, in files off `.claude/protected-paths.txt`. No shell |
+| any, named per call | `reviewer` | Adversarial review, read-only: the review runs on Opus, Sonnet and Haiku at once. No editing, shell or web |
 | `sonnet` | `web-researcher` | Web research with sources. It cannot read our files, and what it returns is untrusted text |
-| `opus` | everything else | Plans, specs, decisions for a person, adversarial reviews, debugging, features, tests and deploys, and anything touching money, sends, sign-in, secrets, what anyone may read, migrations, production or a live customer's data |
+| `opus` | everything else | Plans, specs, decisions for a person, debugging, features, tests and deploys, and anything touching money, sends, sign-in, secrets, what anyone may read, migrations, production or a live customer's data |
 | Unsure | | `opus` |
 
 Streams and whole sessions stay on Opus: a session always has a shell.

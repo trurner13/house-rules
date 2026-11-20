@@ -49,8 +49,8 @@ London, June 2026** (31 talks via the Tessl registry) plus ongoing notes.
 - [jourdan-pipelines-to-prompts](ways-of-working/jourdan-pipelines-to-prompts.md) — closed feedback loops and harness engineering before granting agent autonomy.
 - [maleix-collective-intelligence](ways-of-working/maleix-collective-intelligence.md) — turn agents' attributed mistakes into reusable team knowledge (three-act workflow).
 - [martinelli-spec-driven-development](ways-of-working/martinelli-spec-driven-development.md) — the AI Unified Process: keep use cases as the stable spec, regenerate code from them.
-- [measuring-ai-adoption](ways-of-working/measuring-ai-adoption.md) — the adopted metric: merge rate and zero-follow-up share; which vanity metrics to demote (three talks).
-- [merge-unit-and-branch-lifetime](ways-of-working/merge-unit-and-branch-lifetime.md) — one branch, one increment, one yes that merges the same day; never branch-into-branch; shared data follows main. From a survey of three sibling repos.
+- [measuring-ai-adoption](ways-of-working/measuring-ai-adoption.md) — a practice, not a rule: merge rate and zero-follow-up share; which vanity metrics to demote (three talks).
+- [merge-unit-and-branch-lifetime](ways-of-working/merge-unit-and-branch-lifetime.md) — one branch, one increment, one yes that merges the same day; never branch-into-branch; shared data follows main. Written from a real failure.
 - [question-delete-simplify](ways-of-working/question-delete-simplify.md) — Musk's five steps in order before a plan is approved: who asked for each requirement (cut the agent's own), delete, simplify, speed up, automate last.
 - [parallel-by-default](ways-of-working/parallel-by-default.md) — split work and run it at once; serial needs a reason (shared files, output dependency, open decision); batch size capped by the gates.
 - [reviewing-someone-elses-ai-written-pr](ways-of-working/reviewing-someone-elses-ai-written-pr.md) — a person leads, AI assists: intent, own first pass, directed read-only AI pass, verify every finding, verdict-first written review; transcript tips for take-home reviews.

@@ -3,7 +3,7 @@
 One place, in the repo, that holds **every** open issue with its status and history.
 
 This is not new process. [`verification-and-gates.md`](verification-and-gates.md)
-already says the idea→merge state machine must persist "to disk so it survives a fresh
+already says the idea→merge flow, if it is enforced as a state machine, must persist "to disk so it survives a fresh
 agent context" — it just never said *where*. **This is that disk.** The tracker is the
 missing persistence layer for a flow the repo already committed to.
 
@@ -59,7 +59,7 @@ investigation-shaped work — the gate was failing 32 of 34 real issues:
 flow:      triage → classified → plan → approved → implementing → pr_open → releasing → done
                                                                                        → dropped
 empirical: open      (acknowledged / being worked / awaiting a ruling)
-           fixed     (remediation landed; verification — LOOK, drape-verify — pending)
+           fixed     (remediation landed; verification — LOOK, visual check — pending)
            deferred  (deliberately parked; next: says what brings it back)
 ```
 

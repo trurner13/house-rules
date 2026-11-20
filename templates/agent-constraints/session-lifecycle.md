@@ -257,7 +257,7 @@ table exists to prevent. If you adopt the create-time gate as a `WorktreeCreate`
 
 ## Adopt it in this order
 
-Do not ship all of this at once — it is the "start tiny" rule applied to itself. Each
+Do not ship all of this at once: start small and let each piece prove itself. Each
 step is useful alone and earns the next:
 
 1. The issue tracker and the capture habit, by hand. **This alone fixes "issues get

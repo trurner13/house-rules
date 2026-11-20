@@ -107,6 +107,6 @@ means **more** planning, not less — "proper archaeology on the codebase" befor
 
 *Source: Katie Roberts, "Stop Maintaining, Start Evolving: Applying AI-Native Practices to
 Brownfield Codebases" (AI Native DevCon London 2026) —
-[transcript](https://www.youtube.com/watch?v=5SKh-FmjX7U) (auto-captions;
+[talk](https://www.youtube.com/watch?v=5SKh-FmjX7U) (auto-captions;
 proper nouns may be misheard). Plus Paul Stack's "start tiny." Encode anti-patterns you
 hit as new constraints so the agent stops repeating old mistakes.*

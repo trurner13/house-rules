@@ -5,13 +5,11 @@ shared allowance. When it runs out, every repo stops merging at once. Spend runs
 test locally first, run CI once per change on its finished code, and never let a workflow
 spend on nothing.
 
-**Why:** In October 2026 a small team's private repos used up their GitHub allowance twice in a
-week, and the work that followed waited a day for it to reset. Moving the tests to a cloud
-build service instead cost money nobody had agreed to, and was banned. Agents treat a CI run as
-free and instant. They push every fix, re-run to "see if it goes green", and fan out streams
-that each test on their own. A design for one feature budgeted 9–15 runs. The cost was the
-smaller problem: an exhausted allowance stops every repo merging at once, so it became the
-bottleneck on all the work.
+**Why:** Agents treat a CI run as free and instant. They push every fix, re-run to "see if it
+goes green", and fan out streams that each test on their own, so a single feature can be planned
+at a dozen runs. On private repos that spends paid minutes nobody agreed to, and an exhausted
+allowance stops every repo merging at once: the cost is the smaller problem, the bottleneck is
+the bigger one. Moving the tests to a cloud build service only moves the bill.
 
 **How to apply:**
 
@@ -46,8 +44,7 @@ bottleneck on all the work.
   (this one does): the rule is about paid compute, not about hosted runners as such.
 - **An idle runner drops off.** A self-hosted runner that is offline for more than 14 days is
   removed from GitHub by itself and has to be registered again.
-- **Anthropic's cloud features are paid compute too.** Managed Code Review (roughly $15–25 a
-  review), routines (full cloud sessions, every connector writable by default) and
+- **Anthropic's cloud features are paid compute too.** Managed Code Review, routines (full cloud sessions, every connector writable by default) and
   `/code-review ultra` all run on Anthropic's cloud for money. An agent never starts one on its
   own: each needs a yes from a human, per run. This closes the gap the research pass found,
   where the kit offered these features and the rule did not say whether they counted.

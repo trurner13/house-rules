@@ -216,9 +216,9 @@ renamed or removed there without being updated here.
   that day), and databases or live settings are only
   ever reloaded from the main version. Each session starts by showing how far every
   branch has drifted from main; one more than two days or one approved piece ahead is
-  raised as a merge question before new work. *Why:* on one project, five approved
-  pieces of work piled up unmerged on one branch for weeks, and the live system was
-  quietly running code that wasn't on main. (In RULES.md: "One branch, one increment,
+  raised as a merge question before new work. *Why:* on one project, several approved
+  pieces of work piled up unmerged on one branch, and shared data was loaded from that
+  branch, so what was being served no longer matched main. (In RULES.md: "One branch, one increment,
   merged on its yes")
 - **Build tools the AI can use well.** Tools are few and broad, loaded only when needed,
   rather than many narrow ones; each has a clear name and description, returns
@@ -380,8 +380,9 @@ renamed or removed there without being updated here.
   (In RULES.md: "Isolate at the boundary, not in the prompt")
 - **Protect shared memory.** When several agents share a store of knowledge, the shared
   part is read-only, each agent has its own scratch space, and changes can be rolled
-  back. A withdrawn entry must be really deleted, not just marked withdrawn, because the
-  AI keeps finding it otherwise and trusts it over the correction. *Why:* one bad or
+  back. A withdrawn entry must be really deleted, or blocked whenever it is looked up, not just
+  marked withdrawn, because the AI keeps finding it otherwise and trusts it over the
+  correction. *Why:* one bad or
   poisoned entry must not spread to every agent.
   (In RULES.md: "Protect shared memory")
 

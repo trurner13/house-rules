@@ -47,7 +47,7 @@ Two consequences for us:
 *(Read via secondary reporting on the 2026 report, not the primary PDF — treat the
 framing as sound and specific figures as unverified.)*
 
-## Supporting practices (honourable mentions — parked as candidates)
+## Supporting practices (honourable mentions, not rules)
 
 - **Risk-tag every diff/PR** (Dubnov + Thomas's "DRS" independently): auto-label each
   PR with a risk level + size so review effort routes to the risky changes and

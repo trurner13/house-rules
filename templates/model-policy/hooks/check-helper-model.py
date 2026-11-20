@@ -20,10 +20,12 @@ import re
 import sys
 import uuid
 
-BUILT_IN = {"", "general-purpose", "Plan", "Explore"}
-ALLOWED = {"haiku": {"scout", "claude-code-guide"}, "sonnet": {"light-editor", "web-researcher", "claude-code-guide"}}
+BUILT_IN = {"", "general-purpose", "Plan", "Explore", "claude-code-guide", "statusline-setup", "web-fetch"}
+# reviewer is read-only (no shell, no web), so the adversarial review can run on Opus, Sonnet and Haiku at once.
+ALLOWED = {"haiku": {"scout", "reviewer"}, "sonnet": {"light-editor", "web-researcher", "reviewer"}}
 TIERS = ("Tiers (.claude/rules/model-policy.md): scout (haiku) reads; light-editor (sonnet) edits unprotected files; "
-         "web-researcher (sonnet) searches the web; anything else names model: opus. Unsure means opus.")
+         "web-researcher (sonnet) searches the web; reviewer (any model) reviews read-only; anything else names "
+         "model: opus. Unsure means opus.")
 
 
 def refuse(why: str) -> None:
@@ -47,6 +49,20 @@ def log_call(agent_type: str, family: str) -> None:
         pass
 
 
+def defined_model(agent_type: str) -> str:
+    """The `model:` a repo's own helper definition fixes, if any (.claude/agents/<name>.md)."""
+    project = os.environ.get("CLAUDE_PROJECT_DIR", "")
+    if not project or not re.fullmatch(r"[A-Za-z0-9._-]+", agent_type):
+        return ""
+    try:
+        text = pathlib.Path(project, ".claude", "agents", f"{agent_type}.md").read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return ""
+    head = re.match(r"---\s*\n(.*?)\n---", text, re.S)
+    m = re.search(r"^model:\s*(\S+)", head.group(1), re.M) if head else None
+    return m.group(1).lower() if m else ""
+
+
 def main() -> None:
     try:
         off = os.environ.get("MODEL_POLICY_OFF") or pathlib.Path.home() / ".claude" / "model-policy-off"
@@ -61,6 +77,10 @@ def main() -> None:
         return
 
     family = next((f for f in ("haiku", "sonnet", "opus", "fable") if f in model), "")
+    if not family and tool == "Agent" and agent_type not in ("", "fork"):
+        # No model named in the call: a repo's own helper may still fix one in its definition.
+        fixed = defined_model(agent_type)
+        family = next((f for f in ("haiku", "sonnet", "opus", "fable") if f in fixed), "")
 
     if re.search(r"(start_session|set_session_model)$", tool):
         if family in ALLOWED:
@@ -69,6 +89,7 @@ def main() -> None:
     if tool != "Agent":
         return
 
+    # A fork always runs on the parent session's model whatever the call says, so it is never a cheap model.
     if agent_type != "fork":
         if not family and agent_type in BUILT_IN:
             refuse(f"a built-in helper needs a model named (agent type '{agent_type}')")

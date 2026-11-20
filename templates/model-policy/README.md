@@ -1,8 +1,8 @@
 # Model triage: an optional kit
 
 Opus stays in the main session and triages. Cheap helpers do the legwork, with the limits enforced by their tool lists and
-two hooks rather than by asking nicely. **Optional, and on trial:** nothing here loads in any repo until that repo copies it
-in, and the sync script does not lay it down. The reasoning, the evidence and what a trial measures are in
+two hooks rather than by asking nicely. **Optional:** nothing here loads in any repo until that repo copies it in, and the sync
+script does not lay it down. It enforces the adopted rule *Triage the models and agents for each job*. The reasoning, the evidence and what a trial measures are in
 [opus-drives-cheaper-helpers](../../knowledge/agents/opus-drives-cheaper-helpers.md).
 
 ## What is in the kit
@@ -12,6 +12,7 @@ in, and the sync script does not lay it down. The reasoning, the evidence and wh
 | [`model-policy.md`](model-policy.md) | `.claude/rules/` | The rule and its table of tiers. Set the date on its second line |
 | [`agents/scout.md`](agents/scout.md) | `.claude/agents/` | Haiku. Reads and searches: no editing, no shell |
 | [`agents/light-editor.md`](agents/light-editor.md) | `.claude/agents/` | Sonnet. Edits files off the protected list: no shell |
+| [`agents/reviewer.md`](agents/reviewer.md) | `.claude/agents/` | Any model, named per call. Reviews read-only: no editing, no shell, no web, so the three-model review can run on Opus, Sonnet and Haiku |
 | [`agents/web-researcher.md`](agents/web-researcher.md) | `.claude/agents/` | Sonnet. Web only: it cannot read the repo, so private data, untrusted content and a way out never meet in one agent |
 | [`hooks/check-helper-model.py`](hooks/check-helper-model.py) | `.claude/hooks/` | Refuses a built-in helper with no model named, a cheap model on anything but its own helper, and a cheap model on a whole session |
 | [`hooks/guard-light-editor.py`](hooks/guard-light-editor.py) | `.claude/hooks/` | Refuses `light-editor`'s edits to a protected path, at the moment of editing |
@@ -46,8 +47,6 @@ in, and the sync script does not lay it down. The reasoning, the evidence and wh
 5. **Prove it with real calls**, in a session started after the files are committed. A helper with no model is refused. Haiku on
    `Explore` is refused. `scout` reports no shell. `light-editor` makes one allowed edit and has one refused. Delete the file
    the allowed edit made.
-
-No sign-off trailer is needed on `.claude/` changes (owner's decision, 2026-11-07).
 
 ## What it cannot do
 

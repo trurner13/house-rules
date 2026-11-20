@@ -34,8 +34,15 @@ ROUTE_CASES = [
     ({"subagent_type": "light-editor"}, "Agent", 0),
     ({"subagent_type": "light-editor", "model": "sonnet"}, "Agent", 0),
     ({"subagent_type": "web-researcher", "model": "sonnet"}, "Agent", 0),
-    ({"subagent_type": "claude-code-guide", "model": "sonnet"}, "Agent", 0),
-    ({"subagent_type": "claude-code-guide"}, "Agent", 0),
+    ({"subagent_type": "claude-code-guide", "model": "sonnet"}, "Agent", 2),
+    ({"subagent_type": "claude-code-guide"}, "Agent", 2),
+    ({"subagent_type": "claude-code-guide", "model": "opus"}, "Agent", 0),
+    ({"subagent_type": "web-fetch"}, "Agent", 2),
+    ({"subagent_type": "reviewer", "model": "sonnet"}, "Agent", 0),
+    ({"subagent_type": "reviewer", "model": "haiku"}, "Agent", 0),
+    ({"subagent_type": "reviewer", "model": "opus"}, "Agent", 0),
+    ({"subagent_type": "cheap-shell"}, "Agent", 2),
+    ({"subagent_type": "opus-helper"}, "Agent", 0),
     ({"subagent_type": "a-reviewer"}, "Agent", 0),
     ({"subagent_type": "fork"}, "Agent", 0),
     ({"model": "claude-sonnet-5-5"}, "mcp__ccd_session__start_session", 2),
@@ -53,7 +60,14 @@ def run(hook: pathlib.Path, payload: str, env: dict) -> int:
 
 
 def test_route(problems: list, work: pathlib.Path) -> None:
-    trial = {"MODEL_TRIAL_DIR": str(work / "trial"), "MODEL_POLICY_OFF": str(work / "no-such-file")}
+    project = work / "project"
+    (project / ".claude" / "agents").mkdir(parents=True)
+    (project / ".claude" / "agents" / "cheap-shell.md").write_text(
+        "---\nname: cheap-shell\nmodel: haiku\ntools: Bash\n---\nx\n", encoding="utf-8")
+    (project / ".claude" / "agents" / "opus-helper.md").write_text(
+        "---\nname: opus-helper\nmodel: opus\n---\nx\n", encoding="utf-8")
+    trial = {"MODEL_TRIAL_DIR": str(work / "trial"), "MODEL_POLICY_OFF": str(work / "no-such-file"),
+             "CLAUDE_PROJECT_DIR": str(project)}
     for tool_input, tool, want in ROUTE_CASES:
         code = run(ROUTE, json.dumps({"tool_name": tool, "tool_input": tool_input}), trial)
         if code != want:
@@ -104,7 +118,16 @@ def test_guard(problems: list, work: pathlib.Path) -> None:
         (outside / "a.md", 2),
         (f"{repo / 'CLAUDE.md'}::$DATA", 2),
         (repo / "CLAUDE~1.MD", 2),
+        (f"{repo / 'CLAUDE.md'}:hidden", 2),
     ]
+    link = repo / "docs" / "link-to-scripts"
+    (repo / "docs").mkdir(exist_ok=True)
+    (repo / "scripts").mkdir(exist_ok=True)
+    try:
+        os.symlink(repo / "scripts", link, target_is_directory=True)
+        cases.append((link / "run.py", 2))
+    except (OSError, NotImplementedError):
+        print("  SKIP  symlink case: this machine cannot create symlinks without extra rights")
     trial = {"MODEL_TRIAL_DIR": str(work / "trial")}
     for path, want in cases:
         code = run(GUARD, json.dumps({"tool_input": {"file_path": str(path)}}), trial)

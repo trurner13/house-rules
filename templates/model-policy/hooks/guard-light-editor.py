@@ -64,7 +64,9 @@ def main() -> None:
     if not path.strip():
         block("the edit names no file")
 
-    full = os.path.abspath(path)
+    # realpath follows symlinks and junctions, so a link inside an allowed folder that points at a
+    # protected file is judged by where it really leads.
+    full = os.path.realpath(os.path.abspath(path))
     root = find_root(full)
     if root is None:
         block("the file is in no repository", "", full)
@@ -72,7 +74,7 @@ def main() -> None:
     relative = os.path.relpath(full, root).replace("\\", "/").lower()
 
     for segment in relative.split("/"):
-        if "::" in segment or re.search(r"[. ]$", segment) or re.search(r"~\d", segment):
+        if ":" in segment or re.search(r"[. ]$", segment) or re.search(r"~\d", segment):
             block("the path has a form that could hide its real name", repo, relative)
         if segment in (".git", ".claude"):
             block(f"{relative} is inside a {segment} folder", repo, relative)
