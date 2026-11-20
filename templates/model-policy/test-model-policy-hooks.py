@@ -105,9 +105,12 @@ def test_route(problems: list, work: pathlib.Path) -> None:
         '---\nname: "reviewer"\ntools: "Read, Grep, Glob"\n---\nx\n', encoding="utf-8")
     (fmt / ".claude" / "agents" / "light-editor.md").write_text(
         "---\nname: 'light-editor'\nmodel: \"sonnet\"\ntools: [Read, Grep, Glob, Edit, Write]\n---\nx\n", encoding="utf-8")
+    (fmt / ".claude" / "agents" / "web-researcher.md").write_text(
+        "---\nname: web-researcher  # web only\nmodel: sonnet # cheap\ntools:\n- WebSearch\n- WebFetch  # sources\n---\nx\n",
+        encoding="utf-8")
     fmt_env = {**trial, "CLAUDE_PROJECT_DIR": str(fmt)}
     for tool_input in ({"subagent_type": "scout"}, {"subagent_type": "reviewer", "model": "haiku"},
-                       {"subagent_type": "light-editor"}):
+                       {"subagent_type": "light-editor"}, {"subagent_type": "web-researcher"}):
         code = run(ROUTE, json.dumps({"tool_name": "Agent", "tool_input": tool_input}), fmt_env)
         if code != 0:
             problems.append(f"route: a read-only helper in another YAML form {tool_input} gave {code}, wanted 0")
@@ -117,8 +120,15 @@ def test_route(problems: list, work: pathlib.Path) -> None:
         '---\nname: "reviewer"\ntools: Read, Bash\n---\nx\n', encoding="utf-8")
     (bad / ".claude" / "agents" / "y.md").write_text(
         "---\nname: scout\ntools:\n  - Read\n  - Bash\n---\nx\n", encoding="utf-8")
-    bad_env = {**trial, "CLAUDE_PROJECT_DIR": str(bad)}
-    for tool_input in ({"subagent_type": "reviewer", "model": "haiku"}, {"subagent_type": "scout", "model": "haiku"}):
+    (bad / ".claude" / "agents" / "z.md").write_text(
+        "---\nname: light-editor  # read-only, honest\ntools: Read, Bash  # shell\n---\nx\n", encoding="utf-8")
+    clean_home = work / "clean-home"
+    clean_home.mkdir()
+    for helper in ("reviewer", "scout", "light-editor"):
+        shutil.copy(HERE / "agents" / f"{helper}.md", clean_home / f"{helper}.md")
+    bad_env = {**trial, "CLAUDE_PROJECT_DIR": str(bad), "CLAUDE_AGENTS_HOME": str(clean_home)}
+    for tool_input in ({"subagent_type": "reviewer", "model": "haiku"}, {"subagent_type": "scout", "model": "haiku"},
+                       {"subagent_type": "light-editor", "model": "sonnet"}):
         code = run(ROUTE, json.dumps({"tool_name": "Agent", "tool_input": tool_input}), bad_env)
         if code != 2:
             problems.append(f"route: a kit name holding a shell in another YAML form {tool_input} gave {code}, wanted 2")

@@ -60,29 +60,50 @@ KIT_TOOLS = {
 }
 
 
-def _unquote(value: str) -> str:
+def _clean(value: str) -> str:
+    """One YAML scalar as a YAML reader sees it: a quoted value is taken up to its closing quote,
+    and an unquoted one stops at a comment (` #`, a # after a space or tab)."""
     value = value.strip()
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-        return value[1:-1].strip()
-    return value
+    if value[:1] in ("'", '"'):
+        end = value.find(value[0], 1)
+        if end > 0:
+            return value[1:end].strip()
+    value = re.split(r"[ \t]#", value, maxsplit=1)[0] if not value.startswith("#") else ""
+    return value.strip()
 
 
-def parse_front(head: str) -> dict[str, str]:
-    """Top-level `key: value` pairs of a helper's frontmatter, as Claude Code reads them: quotes
-    stripped, and a list (`[A, B]`, or `- A` lines under the key) joined into one comma list."""
-    fields: dict[str, str] = {}
-    key = ""
+def _items(value: str) -> list[str]:
+    """A tools value as a list: `A, B`, `[A, B]` or `"A, B"`, each item cleaned."""
+    value = _clean(value)
+    if value.startswith("[") and value.endswith("]"):
+        value = value[1:-1]
+    return [t for t in (_clean(part) for part in value.split(",")) if t]
+
+
+def parse_front(head: str) -> dict[str, list[str]]:
+    """Top-level keys of a helper's frontmatter, as Claude Code reads them, each as a list of
+    values: quotes and comments stripped, and a block list (`- A` lines, indented or not, under
+    a key with no value of its own) gathered under that key. Nested blocks (a `hooks:` table)
+    go to their own key and never to another."""
+    fields: dict[str, list[str]] = {}
+    key, list_open = "", False
     for line in head.splitlines():
-        top = re.match(r"^([A-Za-z_-]+):[ \t]*(.*?)[ \t]*$", line)
-        if top:
-            key, value = top.group(1), _unquote(top.group(2))
-            if value.startswith("[") and value.endswith("]"):
-                value = value[1:-1]
-            fields[key] = value
+        if not line.strip() or line.lstrip().startswith("#"):
             continue
-        item = re.match(r"^[ \t]+-[ \t]*(.*?)[ \t]*$", line)
-        if item and key:
-            fields[key] = f"{fields[key]},{_unquote(item.group(1))}" if fields[key] else _unquote(item.group(1))
+        top = re.match(r"^([A-Za-z_-]+):(.*)$", line)
+        if top:
+            key, raw = top.group(1), top.group(2)
+            value = _clean(raw)
+            fields[key] = _items(raw) if value else []
+            list_open = not value
+            continue
+        item = re.match(r"^[ \t]*-[ \t]+(.*)$", line) or re.match(r"^[ \t]*-$", line)
+        if item and key and list_open:
+            text = _clean(item.group(1)) if item.groups() else ""
+            if text and ":" not in text:
+                fields[key].append(text)
+            elif ":" in text:
+                list_open = False  # a list of tables (e.g. hooks): not a list of names
     return fields
 
 
@@ -111,11 +132,12 @@ def find_definition(agent_type: str) -> tuple[str, set[str] | None] | None:
             if not head:
                 continue
             fields = parse_front(head.group(1))
-            if fields.get("name", f.stem) != agent_type:
+            name = (fields.get("name") or [f.stem])[0]
+            if name != agent_type:
                 continue
             tools = fields.get("tools")
-            names = {_unquote(t) for t in tools.split(",") if _unquote(t)} if tools else None
-            return fields.get("model", "").lower(), names
+            names = set(tools) if tools else None
+            return " ".join(fields.get("model", [])).lower(), names
     return None
 
 
