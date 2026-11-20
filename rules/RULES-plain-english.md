@@ -143,7 +143,8 @@ renamed or removed there without being updated here.
   fixes the code instead. Before release, the finished product is used like a real
   user would, deliberately tried to break, and checked for speed. *Why:* passing the
   small tests isn't the same as working; one team shipped three bugs that passed all of
-  theirs. (In RULES.md: "Tests are the source of truth")
+  theirs. A security fix gets two checks: the hole is closed, and nothing else changed.
+  (In RULES.md: "Tests are the source of truth")
 - **Never live with a test that sometimes fails.** A test that passes and fails at random
   gets fixed or deleted straight away, never re-run until it happens to pass. *Why:*
   the AI learned from people who ignore these, and it will too unless this is enforced.
@@ -290,7 +291,8 @@ renamed or removed there without being updated here.
 - **Watch for the dangerous combination.** An agent that can see private data, reads
   content from outsiders, and can send things out can be tricked into leaking. If all
   three are present, remove one. Check across everything the agent is connected to,
-  not one tool at a time. *Why:* the three parts usually sit in different tools, which
+  not one tool at a time. Two parts are already a risk: an agent that sees private
+  data and can post somewhere public may overshare just by being helpful. *Why:* the three parts usually sit in different tools, which
   makes the danger easy to miss. (In RULES.md: "Lethal-trifecta check")
 - **Never let an AI that can run commands read material from outsiders.** Someone
   else's code, a web page, a sent file: any of them can carry hidden instructions that

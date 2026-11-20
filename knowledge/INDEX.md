@@ -50,6 +50,7 @@ London, June 2026** (31 talks via the Tessl registry) plus ongoing notes.
 - [martinelli-spec-driven-development](ways-of-working/martinelli-spec-driven-development.md) — the AI Unified Process: keep use cases as the stable spec, regenerate code from them.
 - [measuring-ai-adoption](ways-of-working/measuring-ai-adoption.md) — the adopted metric: merge rate and zero-follow-up share; which vanity metrics to demote (three talks).
 - [parallel-by-default](ways-of-working/parallel-by-default.md) — split work and run it at once; serial needs a reason (shared files, output dependency, open decision); batch size capped by the gates.
+- [reviewing-someone-elses-ai-written-pr](ways-of-working/reviewing-someone-elses-ai-written-pr.md) — a person leads, AI assists: intent, own first pass, directed read-only AI pass, verify every finding, verdict-first written review; transcript tips for take-home reviews.
 - [session-handover-and-work-state](ways-of-working/session-handover-and-work-state.md) — a session is not a unit of storage: checkpoint the branch, capture the intent, and make the *next* session's start the gate.
 - [stack-humans-architect-ai-writes-code](ways-of-working/stack-humans-architect-ai-writes-code.md) — humans own intent and constraints; agents write all code; five merge gates.
 - [syme-continuous-ai](ways-of-working/syme-continuous-ai.md) — Continuous AI as a third pillar beside CI/CD: recurring, sandboxed agent jobs that emit to one narrow safe channel.
