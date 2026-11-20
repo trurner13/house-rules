@@ -204,6 +204,15 @@ def main() -> int:
                and not (home / ".claude" / "escape.jsonl").exists()
                and not (home / "escape.jsonl").exists()
                and (home / ".claude" / "session-archive" / "quiet" / "transcript.jsonl").is_file(), res.stderr)
+        odd = []
+        for i in (1, 2):
+            t = tmp / f"..odd{i}.jsonl"
+            t.write_text(f'{{"n":{i}}}\n', encoding="utf-8")
+            subprocess.run([sys.executable, "-I", str(quiet / ".claude" / "hooks" / "session-end.py")],
+                           input=json.dumps({"session_id": "../x", "transcript_path": str(t)}),
+                           capture_output=True, text=True, encoding="utf-8", env=env, check=False)
+        odd = sorted((home / ".claude" / "session-archive" / "quiet").glob("session-*.jsonl"))
+        expect("session-end: two sessions with unusable names keep two archives", len(odd) == 2, str(odd))
         res = subprocess.run([sys.executable, "-I", str(quiet / ".claude" / "hooks" / "session-end.py")],
                              input=json.dumps({"session_id": "nope", "transcript_path": str(tmp / "missing.jsonl")}),
                              capture_output=True, text=True, encoding="utf-8", env=env, check=False)

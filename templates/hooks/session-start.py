@@ -26,6 +26,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -62,12 +63,20 @@ def find_exe(name: str) -> str | None:
 
 
 GIT = find_exe("git")
-GIT_TIMEOUT = 20  # seconds per call; the whole hook has 120
+GIT_TIMEOUT = 20  # seconds per call at most
+# One deadline for the whole digest, under settings.json's 120 s, so a slow repo loses its
+# last sections instead of overrunning (Claude Code would then discard everything).
+DEADLINE = time.monotonic() + 100
+
+
+def time_left(cap: float) -> float:
+    return max(0.0, min(cap, DEADLINE - time.monotonic()))
 
 
 def git(*args: str, cwd: Path | str | None = None) -> str:
     """Run git and return its stdout, or '' on any failure or timeout (nothing to report)."""
-    if GIT is None:
+    budget = time_left(GIT_TIMEOUT)
+    if GIT is None or budget < 1:
         return ""
     cmd = [GIT]
     if cwd is not None:
@@ -76,7 +85,7 @@ def git(*args: str, cwd: Path | str | None = None) -> str:
     try:
         res = subprocess.run(
             cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-            timeout=GIT_TIMEOUT,
+            timeout=budget,
         )
     except (OSError, ValueError, subprocess.TimeoutExpired):
         return ""
@@ -288,7 +297,7 @@ if claude_exe:
     try:
         res = subprocess.run(
             [claude_exe, "--version"], capture_output=True, text=True,
-            encoding="utf-8", errors="replace", timeout=10,
+            encoding="utf-8", errors="replace", timeout=max(1.0, time_left(10)),
         )
         cv = next((ln for ln in res.stdout.splitlines() if ln != ""), "")
     except (OSError, ValueError, subprocess.TimeoutExpired):

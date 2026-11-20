@@ -44,6 +44,7 @@ this docstring. See agent-constraints/session-lifecycle.md.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -97,21 +98,20 @@ def main() -> int:
     try:
         if git_exe:
             # --git-common-dir names the main checkout's .git, so a session in a worktree
-            # (.claude/worktrees/<id>) still archives under the repo's own name.
+            # (.claude/worktrees/<id>) still archives under the repo's own name. It is
+            # relative to `here` on some git versions and absolute on others, so resolve it
+            # against `here`. (--path-format=absolute is not used: git before 2.31 echoes an
+            # unknown rev-parse option back with exit 0 instead of failing.)
             res = subprocess.run(
-                [git_exe, "-C", str(here), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                [git_exe, "-C", str(here), "rev-parse", "--git-common-dir"],
                 capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5,
             )
-            if res.returncode == 0 and res.stdout.strip():
-                common = Path(res.stdout.strip())
-                repo = (common.parent.name if common.name == ".git" else common.name) or repo
-            else:  # git older than 2.31 has no --path-format
-                res = subprocess.run(
-                    [git_exe, "-C", str(here), "rev-parse", "--show-toplevel"],
-                    capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5,
-                )
-                if res.returncode == 0 and res.stdout.strip():
-                    repo = Path(res.stdout.strip()).name or repo
+            out = res.stdout.strip()
+            if res.returncode == 0 and out and "\n" not in out:
+                common = (here / out).resolve()
+                name = common.parent.name if common.name == ".git" else common.name
+                if name and re.fullmatch(r"[^\x00-\x1f/\\]+", name):
+                    repo = name
     except (OSError, ValueError, subprocess.TimeoutExpired):
         pass
 
@@ -124,7 +124,13 @@ def main() -> int:
     safe = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
     session_id = data.get("session_id")
     if not (isinstance(session_id, str) and safe.fullmatch(session_id)):
-        session_id = src.stem if safe.fullmatch(src.stem) else "session"
+        # Fall back to the transcript's own name, else a name derived from the id and
+        # path, so two odd sessions never overwrite each other's archive.
+        if safe.fullmatch(src.stem):
+            session_id = src.stem
+        else:
+            seed = f"{data.get('session_id')!r}|{src}".encode("utf-8", "replace")
+            session_id = "session-" + hashlib.sha256(seed).hexdigest()[:16]
     dst = dst_dir / f"{session_id}{src.suffix}"
     shutil.copyfile(src, dst)
     return 0
