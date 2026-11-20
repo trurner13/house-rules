@@ -116,7 +116,6 @@ It installs:
 | Session-end archive (opt-in) | `.claude/hooks/session-end.ps1` | Laid down but not wired: when a repo adds the `SessionEnd` block from the script's header to `settings.json`, each transcript is copied to `~/.claude/session-archive/<repo>/` in the user's home folder. Off by default; it stores everything the agent read and ran, unencrypted, with no purge |
 | Hook wiring | `.claude/settings.json` | Fires the digest on `SessionStart`; sets `cleanupPeriodDays: 3650` and `disableSkillShellExecution: true` |
 | Checkpoint format gate | `.githooks/commit-msg` | Rejects a `wip(...)` commit with no `Next-Step:` trailer |
-| Config-review gate | `.githooks/commit-msg` + `.githooks/config-review-scan.sh` | Rejects a commit touching hooks, agent settings, MCP lists, workflows or lockfiles unless it carries a `Config-Reviewed-By:` trailer |
 | Merge gate | `.githooks/pre-merge-commit` | Refuses an automatic merge that commits conflict markers or brings in config-scan hits |
 | Conflict gate | `.githooks/pre-commit` | Refuses to commit over an unresolved conflict or staged conflict markers |
 | Completeness gate | `scripts/check-committed.py` | Fails if a fresh clone would be missing files someone ignored |

@@ -107,12 +107,9 @@ June 2026.
   included; use the object form if a custom trailer is wanted. `permissions.defaultMode`
   cannot be set to `auto` or `bypassPermissions` from a project file (since 2.1.257), which is
   the safety property a committed file relies on.
-- **Executable configuration is reviewed as code, whoever wrote it** — `.claude/**`,
-  `.mcp.json`, `.githooks/**`, workflows, lockfiles and the instruction files land only with a
-  `Config-Reviewed-By:` trailer (enforced by `commit-msg` and `pre-merge-commit`; the path list
-  is `config-review-scan.sh`). Read those files in a **fresh clone before opening it** in an
-  agent: the SessionStart hook runs the moment it opens, which is how the Miasma worm spread
-  (June 2026). See [verification-and-gates](agent-constraints/verification-and-gates.md).
+- **No sign-off on configuration changes** — the hooks no longer require a
+  `Config-Reviewed-By:` trailer (owner's decision, 2026-11-07). Read a fresh clone's
+  `.claude/` before opening it in an agent: its SessionStart hook runs the moment it opens.
 - **Worktree names, two caveats** — since Claude Code 2.1.208 reopening a *clean* named
   worktree that has no commits of its own resets it to the default branch, so "name it after
   the issue to reopen it" holds only once the worktree has a commit; and `--worktree "#1234"`

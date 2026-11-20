@@ -5,9 +5,7 @@
 #
 # Each case writes a commit message to a temp file and runs the real hook on it.
 # The hook must read the message the way git does (git interpret-trailers), so a
-# Next-Step: line git files under the body is rejected. The configuration gate is
-# fed its staged-file list through COMMIT_MSG_STAGED_FILES so the tests never depend
-# on what happens to be staged in the repo they run in. Exits 1 on any failure.
+# Next-Step: line git files under the body is rejected. Exits 1 on any failure.
 
 here=$(cd "$(dirname "$0")" && pwd)
 hook="$here/commit-msg"
@@ -69,26 +67,17 @@ expect pass   "editor message, leading comment, good" '# Please enter the commit
 expect pass   "an ordinary commit"                  'docs: tidy\n\nNo trailer needed.\n'
 expect pass   "a fixup! of a checkpoint"            'fixup! wip(x): park it\n'
 
-# The executable-configuration gate: a person signs for hooks, agent settings, MCP
-# lists, workflows and lockfiles, whatever the subject line says.
-sig='Config-Reviewed-By: A Person <a@example.invalid>'
-expect_staged reject "a hook change, unsigned"            '.githooks/pre-commit'                 'hooks: tighten\n\nBody.\n'
-expect_staged pass   "a hook change, signed"              '.githooks/pre-commit'                 "hooks: tighten\n\n$sig\n"
-expect_staged reject "agent settings, unsigned"           '.claude/settings.json'                'settings: add hook\n'
-expect_staged reject "a nested .claude file, unsigned"    'apps/web/.claude/hooks/x.ps1'         'settings: add hook\n'
-expect_staged reject "an MCP server list, unsigned"       '.mcp.json'                            'mcp: add server\n'
-expect_staged reject "a workflow, unsigned"               '.github/workflows/ci.yml'             'ci: faster\n'
-expect_staged reject "a lockfile, unsigned"               'package-lock.json'                    'deps: bump\n'
-expect_staged reject "CLAUDE.md, unsigned"                'CLAUDE.md'                            'docs: instructions\n'
-expect_staged reject "a fixup! that touches a hook, unsigned" '.githooks/commit-msg'             'fixup! hooks: tighten\n'
-expect_staged reject "signature in the body, not a trailer" '.githooks/pre-commit'               "hooks: tighten\n\n$sig\n\nMore body after it.\n"
-expect_staged reject "signature with no name"             '.githooks/pre-commit'                 'hooks: tighten\n\nConfig-Reviewed-By:\n'
-expect_staged pass   "mixed change, signed"               '.claude/settings.json\nsrc/app.py'    "feat: x\n\n$sig\nCo-Authored-By: A <a@example.invalid>\n"
-expect_staged pass   "a signed checkpoint touching a hook" '.githooks/pre-commit'                "wip(x): park it\n\nNext-Step: finish\n$sig\n"
-expect_staged reject "a checkpoint touching a hook, signed but no Next-Step" '.githooks/pre-commit' "wip(x): park it\n\n$sig\n"
-expect_staged pass   "ordinary source files, unsigned"    'src/app.py\ndocs/readme.md'           'feat: x\n'
-expect_staged pass   "a path that merely contains the word claude" 'src/claude_client.py'       'feat: x\n'
-expect_staged pass   "nothing staged"                     ''                                     'feat: x\n'
+# No sign-off gate (removed 2026-11-07, owner's decision): a hook or lockfile change
+# commits with no Config-Reviewed-By: trailer.
+expect_staged pass   "a hook and lockfile change, no sign-off" '.githooks/pre-commit
+uv.lock' 'hooks: tidy
+
+Co-Authored-By: A <a@example.invalid>
+'
+expect_staged reject "a checkpoint touching a hook still needs Next-Step" '.githooks/pre-commit' 'wip(x): park it
+
+Body.
+'
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures of $n check(s) FAILED"

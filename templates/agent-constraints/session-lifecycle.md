@@ -148,7 +148,7 @@ Add another `wip(...)` commit, or `git commit --fixup=<sha>` and autosquash whil
 still local. **Never `--amend` a checkpoint**: `--amend -m` silently drops the
 trailers, turning a discoverable checkpoint into an invisible one, and amending is
 unsafe once pushed. The branch is merged with a merge commit, never squashed (squash
-strips the `Co-Authored-By:` and `Config-Reviewed-By:` trailers that are the attribution
+strips the `Co-Authored-By:` trailers that are the attribution
 record; see the rule "Agents commit under their own identity"). The `wip(...)` chain
 therefore stays in history, which is harmless: each commit says what it is, and the
 merge commit carries the summary. *(Changed 2026-10-12; this paragraph used to rely on

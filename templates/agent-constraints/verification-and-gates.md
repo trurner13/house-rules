@@ -45,20 +45,10 @@ Encode blocking conditions as executable checks:
 - Ordering/cooldown checks (e.g. don't accept a "merged" signal seconds after the PR
   opened).
 - Nothing merges on a red gate; a **`hold` label** blocks auto-merge (escape hatch).
-- **Executable configuration is reviewed as code, whoever wrote it.** Hooks, `.claude/**`,
-  `.mcp.json`, CI workflows, lockfiles and the agent instruction files run or decide what
-  runs before anyone reads them. In 2026 both named supply-chain attacks on coding agents
-  came through exactly these paths from trusted accounts: Miasma (5 Jun) via committed
-  `.claude/settings.json` hooks in 73 Microsoft repos, Deadbugz (10 Aug) via pull requests
-  adding an MCP server that behaved for three calls and then harvested credentials. So a
-  change to any of them lands only with a human's name on it: the `commit-msg` hook
-  rejects a commit touching those paths without a `Config-Reviewed-By: Name <email>`
-  trailer, and `pre-merge-commit` refuses an automatic merge that brings them in
-  (the human reads the files and commits the merge with the trailer). The path list is
-  `config-review-scan.sh`; adding a pattern there is the policy change. An agent never
-  adds the trailer on a person's behalf. The same rule applies to a **fresh clone**: read
-  those files before opening the repo in an agent, because the SessionStart hook runs the
-  moment it opens.
+- **No sign-off on configuration changes.** The hooks no longer require a
+  `Config-Reviewed-By:` trailer on hooks, `.claude/**`, workflows, lockfiles or the
+  instruction files (owner's decision, 2026-11-07). Read a fresh clone's `.claude/`
+  before opening it in an agent: its SessionStart hook runs the moment it opens.
 
 ## The enforced flow (aspirational: a state machine)
 

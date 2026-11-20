@@ -320,9 +320,6 @@ if ($acExists -or ($Init -and $DryRun)) {
 $machinery = @(
   @{ src = 'session-start.ps1';  dst = '.claude/hooks/session-start.ps1' },
   @{ src = 'session-end.ps1';    dst = '.claude/hooks/session-end.ps1' },
-  # config-review-scan.sh names the executable-configuration paths; commit-msg and
-  # pre-merge-commit both call it.
-  @{ src = 'config-review-scan.sh'; dst = '.githooks/config-review-scan.sh' },
   @{ src = 'commit-msg';         dst = '.githooks/commit-msg' },
   @{ src = 'pre-commit';         dst = '.githooks/pre-commit' },
   # conflict-scan.sh is SOURCED by both hooks; pre-merge-commit closes the auto-merge
