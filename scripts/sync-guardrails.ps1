@@ -352,18 +352,19 @@ foreach ($m in $machinery) { Sync-Machinery $m.src $m.dst ([bool]$Init) ([string
 if ($Init) {
   Write-Host "Kit (-Init):"
 
-  # Wire the SessionStart digest and the SessionEnd archive. Only written when the repo
+  # Wire the SessionStart digest (the SessionEnd archive is opt-in: see session-end.py).
+  # Only written when the repo
   # has no settings.json - merging JSON blindly would clobber a repo's own
   # permissions/env, so we print the snippet instead.
   $settingsDst = Join-Path $Repo '.claude/settings.json'
   if (Test-Path $settingsDst) {
-    Write-Host "  ! .claude/settings.json exists - NOT modified. Add the SessionStart and SessionEnd hooks by hand:"
+    Write-Host "  ! .claude/settings.json exists - NOT modified. Add the SessionStart hook by hand:"
     Write-Host "      see templates/hooks/settings.json in the guardrails repo (uv run --no-sync python <hook>.py)"
   } elseif ($DryRun) {
-    Write-Host "  would add .claude/settings.json (SessionStart + SessionEnd wiring)"
+    Write-Host "  would add .claude/settings.json (SessionStart wiring)"
   } else {
     Copy-Item -Path (Join-Path $hookSrc 'settings.json') -Destination $settingsDst
-    Write-Host "  + .claude/settings.json (SessionStart + SessionEnd wiring)"
+    Write-Host "  + .claude/settings.json (SessionStart wiring)"
   }
 
   # The issue tracker.
