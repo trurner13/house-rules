@@ -60,6 +60,32 @@ KIT_TOOLS = {
 }
 
 
+def _unquote(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return value[1:-1].strip()
+    return value
+
+
+def parse_front(head: str) -> dict[str, str]:
+    """Top-level `key: value` pairs of a helper's frontmatter, as Claude Code reads them: quotes
+    stripped, and a list (`[A, B]`, or `- A` lines under the key) joined into one comma list."""
+    fields: dict[str, str] = {}
+    key = ""
+    for line in head.splitlines():
+        top = re.match(r"^([A-Za-z_-]+):[ \t]*(.*?)[ \t]*$", line)
+        if top:
+            key, value = top.group(1), _unquote(top.group(2))
+            if value.startswith("[") and value.endswith("]"):
+                value = value[1:-1]
+            fields[key] = value
+            continue
+        item = re.match(r"^[ \t]+-[ \t]*(.*?)[ \t]*$", line)
+        if item and key:
+            fields[key] = f"{fields[key]},{_unquote(item.group(1))}" if fields[key] else _unquote(item.group(1))
+    return fields
+
+
 def find_definition(agent_type: str) -> tuple[str, set[str] | None] | None:
     """The `model:` and `tools:` of the helper named agent_type, from the repo's or the user's
     .claude/agents/ (matched on the `name:` line, else the file name). None when none is found;
@@ -84,11 +110,11 @@ def find_definition(agent_type: str) -> tuple[str, set[str] | None] | None:
             head = re.match(r"---[ \t]*\r?\n(.*?)\r?\n---", text, re.S)
             if not head:
                 continue
-            fields = dict(re.findall(r"^([A-Za-z_-]+):[ \t]*(.*?)[ \t]*$", head.group(1), re.M))
+            fields = parse_front(head.group(1))
             if fields.get("name", f.stem) != agent_type:
                 continue
             tools = fields.get("tools")
-            names = {t.strip() for t in tools.split(",") if t.strip()} if tools else None
+            names = {_unquote(t) for t in tools.split(",") if _unquote(t)} if tools else None
             return fields.get("model", "").lower(), names
     return None
 
@@ -126,6 +152,9 @@ def main() -> None:
         if family in ALLOWED and agent_type not in ALLOWED[family]:
             names = " or ".join(sorted(ALLOWED[family]))
             refuse(f"{family} runs only on {names}, which have no shell, not on agent type '{agent_type}'")
+        if family in ALLOWED and agent_type in KIT_TOOLS and definition is None:
+            refuse(f"no definition of '{agent_type}' was found in .claude/agents/, so its tools cannot be checked "
+                   f"and it does not run on {family}; copy the kit's agents/{agent_type}.md in first")
         if family in ALLOWED and definition and agent_type in KIT_TOOLS:
             tools = definition[1]
             if tools is None or not tools <= KIT_TOOLS[agent_type]:

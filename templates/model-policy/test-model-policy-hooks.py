@@ -30,10 +30,10 @@ ROUTE_CASES = [
     ({"subagent_type": "a-reviewer", "model": "sonnet"}, "Agent", 2),
     ({"subagent_type": "light-editor", "model": "haiku"}, "Agent", 2),
     ({"subagent_type": "scout"}, "Agent", 0),
-    ({"subagent_type": "scout", "model": "haiku"}, "Agent", 0),
+    ({"subagent_type": "scout", "model": "haiku"}, "Agent", 2),
     ({"subagent_type": "light-editor"}, "Agent", 0),
-    ({"subagent_type": "light-editor", "model": "sonnet"}, "Agent", 0),
-    ({"subagent_type": "web-researcher", "model": "sonnet"}, "Agent", 0),
+    ({"subagent_type": "light-editor", "model": "sonnet"}, "Agent", 2),
+    ({"subagent_type": "web-researcher", "model": "sonnet"}, "Agent", 2),
     ({"subagent_type": "claude-code-guide", "model": "sonnet"}, "Agent", 2),
     ({"subagent_type": "claude-code-guide"}, "Agent", 2),
     ({"subagent_type": "claude-code-guide", "model": "opus"}, "Agent", 0),
@@ -96,6 +96,32 @@ def test_route(problems: list, work: pathlib.Path) -> None:
         code = run(ROUTE, json.dumps({"tool_name": "Agent", "tool_input": tool_input}), kit_env)
         if code != 0:
             problems.append(f"route: the kit's own helper {tool_input} gave {code}, wanted 0")
+    # Frontmatter as Claude Code accepts it: quoted values and YAML lists, both ways round.
+    fmt = work / "formats"
+    (fmt / ".claude" / "agents").mkdir(parents=True)
+    (fmt / ".claude" / "agents" / "scout.md").write_text(
+        "---\nname: scout\nmodel: haiku\ntools:\n  - Read\n  - Grep\n  - Glob\n---\nx\n", encoding="utf-8")
+    (fmt / ".claude" / "agents" / "reviewer.md").write_text(
+        '---\nname: "reviewer"\ntools: "Read, Grep, Glob"\n---\nx\n', encoding="utf-8")
+    (fmt / ".claude" / "agents" / "light-editor.md").write_text(
+        "---\nname: 'light-editor'\nmodel: \"sonnet\"\ntools: [Read, Grep, Glob, Edit, Write]\n---\nx\n", encoding="utf-8")
+    fmt_env = {**trial, "CLAUDE_PROJECT_DIR": str(fmt)}
+    for tool_input in ({"subagent_type": "scout"}, {"subagent_type": "reviewer", "model": "haiku"},
+                       {"subagent_type": "light-editor"}):
+        code = run(ROUTE, json.dumps({"tool_name": "Agent", "tool_input": tool_input}), fmt_env)
+        if code != 0:
+            problems.append(f"route: a read-only helper in another YAML form {tool_input} gave {code}, wanted 0")
+    bad = work / "quoted-bad"
+    (bad / ".claude" / "agents").mkdir(parents=True)
+    (bad / ".claude" / "agents" / "x.md").write_text(
+        '---\nname: "reviewer"\ntools: Read, Bash\n---\nx\n', encoding="utf-8")
+    (bad / ".claude" / "agents" / "y.md").write_text(
+        "---\nname: scout\ntools:\n  - Read\n  - Bash\n---\nx\n", encoding="utf-8")
+    bad_env = {**trial, "CLAUDE_PROJECT_DIR": str(bad)}
+    for tool_input in ({"subagent_type": "reviewer", "model": "haiku"}, {"subagent_type": "scout", "model": "haiku"}):
+        code = run(ROUTE, json.dumps({"tool_name": "Agent", "tool_input": tool_input}), bad_env)
+        if code != 2:
+            problems.append(f"route: a kit name holding a shell in another YAML form {tool_input} gave {code}, wanted 2")
     if run(ROUTE, "not json", trial) != 0:
         problems.append("route: unreadable input did not pass (it must fail open)")
     off = work / "off"
