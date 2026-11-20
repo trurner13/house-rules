@@ -31,8 +31,8 @@ Its limits:
   quality look the same. Tessl cut its cost per PR from about $75 to $13 this way, by its own
   account, and only after the checks existed
   ([podjarny](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=3956s),
-  ); Steve Yegge uses one check per job type to decide whether a cheaper model
-  qualifies ([yegge](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=30798s), ).
+  01:05:56); Steve Yegge uses one check per job type to decide whether a cheaper model
+  qualifies ([yegge](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=30798s), 08:33:18).
 
 ## How to apply
 

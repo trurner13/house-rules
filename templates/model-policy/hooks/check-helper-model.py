@@ -49,18 +49,48 @@ def log_call(agent_type: str, family: str) -> None:
         pass
 
 
-def defined_model(agent_type: str) -> str:
-    """The `model:` a repo's own helper definition fixes, if any (.claude/agents/<name>.md)."""
+# The kit's own helpers and the tools each may hold. A definition under one of these names that
+# lists any other tool (or no tools line, which means every tool) is not the kit's helper, so a
+# cheap model on it is refused: the name alone is never trusted.
+KIT_TOOLS = {
+    "scout": {"Read", "Grep", "Glob"},
+    "reviewer": {"Read", "Grep", "Glob"},
+    "light-editor": {"Read", "Grep", "Glob", "Edit", "Write"},
+    "web-researcher": {"WebSearch", "WebFetch"},
+}
+
+
+def find_definition(agent_type: str) -> tuple[str, set[str] | None] | None:
+    """The `model:` and `tools:` of the helper named agent_type, from the repo's or the user's
+    .claude/agents/ (matched on the `name:` line, else the file name). None when none is found;
+    tools is None when the definition has no tools line (it then gets every tool)."""
+    if not re.fullmatch(r"[A-Za-z0-9._-]+", agent_type):
+        return None
+    folders = []
     project = os.environ.get("CLAUDE_PROJECT_DIR", "")
-    if not project or not re.fullmatch(r"[A-Za-z0-9._-]+", agent_type):
-        return ""
-    try:
-        text = pathlib.Path(project, ".claude", "agents", f"{agent_type}.md").read_text(encoding="utf-8")
-    except (OSError, ValueError):
-        return ""
-    head = re.match(r"---\s*\n(.*?)\n---", text, re.S)
-    m = re.search(r"^model:\s*(\S+)", head.group(1), re.M) if head else None
-    return m.group(1).lower() if m else ""
+    if project:
+        folders.append(pathlib.Path(project, ".claude", "agents"))
+    folders.append(pathlib.Path(os.environ.get("CLAUDE_AGENTS_HOME") or pathlib.Path.home() / ".claude" / "agents"))
+    for folder in folders:
+        try:
+            files = sorted(folder.glob("*.md"))
+        except OSError:
+            continue
+        for f in files:
+            try:
+                text = f.read_text(encoding="utf-8-sig")  # -sig: a byte-order mark must not hide the header
+            except (OSError, ValueError):
+                continue
+            head = re.match(r"---[ \t]*\r?\n(.*?)\r?\n---", text, re.S)
+            if not head:
+                continue
+            fields = dict(re.findall(r"^([A-Za-z_-]+):[ \t]*(.*?)[ \t]*$", head.group(1), re.M))
+            if fields.get("name", f.stem) != agent_type:
+                continue
+            tools = fields.get("tools")
+            names = {t.strip() for t in tools.split(",") if t.strip()} if tools else None
+            return fields.get("model", "").lower(), names
+    return None
 
 
 def main() -> None:
@@ -77,14 +107,14 @@ def main() -> None:
         return
 
     family = next((f for f in ("haiku", "sonnet", "opus", "fable") if f in model), "")
-    if not family and tool == "Agent" and agent_type not in ("", "fork"):
-        # No model named in the call: a repo's own helper may still fix one in its definition.
-        fixed = defined_model(agent_type)
-        family = next((f for f in ("haiku", "sonnet", "opus", "fable") if f in fixed), "")
+    definition = find_definition(agent_type) if tool == "Agent" and agent_type not in ("", "fork") else None
+    if not family and definition:
+        # No model named in the call: the helper's own definition may still fix one.
+        family = next((f for f in ("haiku", "sonnet", "opus", "fable") if f in definition[0]), "")
 
     if re.search(r"(start_session|set_session_model)$", tool):
         if family in ALLOWED:
-            refuse(f"a whole session always has a shell, so sessions stay on Opus in this trial ({tool}, {model})")
+            refuse(f"a whole session always has a shell, so sessions stay on Opus ({tool}, {model})")
         return
     if tool != "Agent":
         return
@@ -96,6 +126,12 @@ def main() -> None:
         if family in ALLOWED and agent_type not in ALLOWED[family]:
             names = " or ".join(sorted(ALLOWED[family]))
             refuse(f"{family} runs only on {names}, which have no shell, not on agent type '{agent_type}'")
+        if family in ALLOWED and definition and agent_type in KIT_TOOLS:
+            tools = definition[1]
+            if tools is None or not tools <= KIT_TOOLS[agent_type]:
+                held = "every tool" if tools is None else ", ".join(sorted(tools))
+                refuse(f"'{agent_type}' here holds {held}, more than the kit's helper of that name "
+                       f"({', '.join(sorted(KIT_TOOLS[agent_type]))}), so it does not run on {family}")
     log_call(agent_type, family)
 
 

@@ -38,9 +38,12 @@ ROUTE_CASES = [
     ({"subagent_type": "claude-code-guide"}, "Agent", 2),
     ({"subagent_type": "claude-code-guide", "model": "opus"}, "Agent", 0),
     ({"subagent_type": "web-fetch"}, "Agent", 2),
-    ({"subagent_type": "reviewer", "model": "sonnet"}, "Agent", 0),
-    ({"subagent_type": "reviewer", "model": "haiku"}, "Agent", 0),
+    ({"subagent_type": "reviewer", "model": "sonnet"}, "Agent", 2),
+    ({"subagent_type": "reviewer", "model": "haiku"}, "Agent", 2),
     ({"subagent_type": "reviewer", "model": "opus"}, "Agent", 0),
+    ({"subagent_type": "bom-shell"}, "Agent", 2),
+    ({"subagent_type": "renamed-shell"}, "Agent", 2),
+    ({"subagent_type": "user-shell"}, "Agent", 2),
     ({"subagent_type": "cheap-shell"}, "Agent", 2),
     ({"subagent_type": "opus-helper"}, "Agent", 0),
     ({"subagent_type": "a-reviewer"}, "Agent", 0),
@@ -66,12 +69,33 @@ def test_route(problems: list, work: pathlib.Path) -> None:
         "---\nname: cheap-shell\nmodel: haiku\ntools: Bash\n---\nx\n", encoding="utf-8")
     (project / ".claude" / "agents" / "opus-helper.md").write_text(
         "---\nname: opus-helper\nmodel: opus\n---\nx\n", encoding="utf-8")
+    (project / ".claude" / "agents" / "bom-shell.md").write_text(
+        "\ufeff---\nname: bom-shell\nmodel: haiku\ntools: Bash\n---\nx\n", encoding="utf-8")
+    (project / ".claude" / "agents" / "other-file-name.md").write_text(
+        "---\nname: renamed-shell\nmodel: haiku\ntools: Bash\n---\nx\n", encoding="utf-8")
+    (project / ".claude" / "agents" / "reviewer.md").write_text(
+        "---\nname: reviewer\ntools: Read, Grep, Glob, Bash\n---\nx\n", encoding="utf-8")
+    home_agents = work / "home-agents"
+    home_agents.mkdir()
+    (home_agents / "user-shell.md").write_text(
+        "---\nname: user-shell\nmodel: haiku\n---\nx\n", encoding="utf-8")
     trial = {"MODEL_TRIAL_DIR": str(work / "trial"), "MODEL_POLICY_OFF": str(work / "no-such-file"),
-             "CLAUDE_PROJECT_DIR": str(project)}
+             "CLAUDE_PROJECT_DIR": str(project), "CLAUDE_AGENTS_HOME": str(home_agents)}
     for tool_input, tool, want in ROUTE_CASES:
         code = run(ROUTE, json.dumps({"tool_name": tool, "tool_input": tool_input}), trial)
         if code != want:
             problems.append(f"route: {tool} {tool_input} gave {code}, wanted {want}")
+    kit_project = work / "kit-project"
+    (kit_project / ".claude" / "agents").mkdir(parents=True)
+    for helper in ("reviewer", "scout", "light-editor", "web-researcher"):
+        shutil.copy(HERE / "agents" / f"{helper}.md", kit_project / ".claude" / "agents" / f"{helper}.md")
+    kit_env = {**trial, "CLAUDE_PROJECT_DIR": str(kit_project)}
+    for tool_input in ({"subagent_type": "reviewer", "model": "haiku"}, {"subagent_type": "reviewer", "model": "sonnet"},
+                       {"subagent_type": "scout"}, {"subagent_type": "light-editor"},
+                       {"subagent_type": "web-researcher", "model": "sonnet"}):
+        code = run(ROUTE, json.dumps({"tool_name": "Agent", "tool_input": tool_input}), kit_env)
+        if code != 0:
+            problems.append(f"route: the kit's own helper {tool_input} gave {code}, wanted 0")
     if run(ROUTE, "not json", trial) != 0:
         problems.append("route: unreadable input did not pass (it must fail open)")
     off = work / "off"

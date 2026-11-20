@@ -2,7 +2,7 @@
 
 Opus stays in the main session and triages. Cheap helpers do the legwork, with the limits enforced by their tool lists and
 two hooks rather than by asking nicely. **Optional:** nothing here loads in any repo until that repo copies it in, and the sync
-script does not lay it down. It enforces the adopted rule *Triage the models and agents for each job*. The reasoning, the evidence and what a trial measures are in
+script does not lay it down. It enforces the adopted rule *Triage the models and agents for each job*. The reasoning, the evidence and what to measure are in
 [opus-drives-cheaper-helpers](../../knowledge/agents/opus-drives-cheaper-helpers.md).
 
 ## What is in the kit
@@ -55,5 +55,8 @@ script does not lay it down. It enforces the adopted rule *Triage the models and
 - **The guard can refuse only when it runs.** If uv or the script is missing, or it times out, or the folder has not been
   trusted, the edit goes through. Keep reading every diff.
 - **It saves room under a plan's limits, probably not cash,** and less than you might hope: building and test runs stay on Opus.
-- **Not covered:** agents inside a Workflow script, a session started from a saved preset, and a person's own model picker.
+- **Not covered:** agents inside a Workflow script, a session started from a saved preset, a person's own model picker,
+  and a plugin's helpers (`plugin:name`): the hook reads helper definitions only from the repo's and the user's
+  `.claude/agents/`. A helper named like one of the kit's (`scout`, `reviewer`, ...) runs on a cheap model only if its
+  definition holds no more tools than the kit's own.
 - **Stopping it:** creating `~/.claude/model-policy-off` stops the routing hook in every repo at once. The guard stays on.

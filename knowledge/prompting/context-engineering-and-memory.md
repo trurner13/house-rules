@@ -72,7 +72,7 @@ still decides what is *intended*: a disagreement between code and spec is a bug 
 change, never something the code wins by default. One vendor's two-week sample found 10% of
 13,700 suspected conflicts were real, and just over half of those were settled by checking
 the code, with wiki pages overruled most often
-([bockeler](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=6547s), ).
+([bockeler](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=6547s), 01:49:07).
 
 ## Adopted here: private memory holds nothing durable (2026-09-15)
 

@@ -79,14 +79,14 @@ Practices, not rules: neither is in `rules/RULES.md`.
   roughly 60-80%, grade the outcome and not the steps, and run the eval sealed, because a
   capable model will game it
   ([carmont-zaragoza](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=15011s),
-  -04:17:28).
+  04:10:11-04:17:28).
 - **The regeneration test.** Pick one small, boring, low-risk component and have an agent
   rebuild it beside the original from the spec and the tests alone. Whatever breaks is
   knowledge that lives only in the code, so write it into the spec. For that to work the
   tests must check behaviour at the component's edge and not be tied to one language or
   framework. Run it as an optional step in the scheduled drift review; it costs a session
   each time ([fowler](https://www.youtube.com/watch?v=kPB9y6ZWXxk&t=22354s),
-  , 06:22:32).
+  06:12:34, 06:22:32).
 
 **Related:** [findings-to-guardrails](../ways-of-working/findings-to-guardrails.md) —
 what to do with each failure so it can't recur.
