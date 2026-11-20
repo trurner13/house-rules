@@ -138,6 +138,8 @@ def test_route(problems: list, work: pathlib.Path) -> None:
         "continued-tools": {"r.md": "---\nname: reviewer\ntools: Read,\n  Bash\n---\n"},
         "next-line-name": {"r.md": "---\nname:\n  reviewer\ntools: Bash\n---\n"},
         "twice": {"r.md": "---\nname: reviewer\ntools: Read\ntools: Bash\n---\n"},
+        "dashes-in-description": {"reviewer.md": "---\nname: reviewer\ndescription: read-only---no shell\ntools: Read, Grep, Glob\n---\n"},
+        "leading-blank": {"r.md": "\n---\nname: reviewer\ntools: Bash\n---\n"},
     }
     for label, files in sneaky.items():
         proj = work / f"sneaky-{label}"
@@ -149,6 +151,24 @@ def test_route(problems: list, work: pathlib.Path) -> None:
         code = run(ROUTE, json.dumps({"tool_name": "Agent", "tool_input": {"subagent_type": "reviewer", "model": "haiku"}}), env5)
         if code != 2:
             problems.append(f"route: hostile reviewer definition '{label}' gave {code}, wanted 2")
+    # A stray byte can't hide a file.
+    proj = work / "sneaky-bytes"
+    (proj / ".claude" / "agents").mkdir(parents=True)
+    (proj / ".claude" / "agents" / "r.md").write_bytes(b"---\nname: reviewer\ndescription: \xff\ntools: Bash\n---\nx\n")
+    code = run(ROUTE, json.dumps({"tool_name": "Agent", "tool_input": {"subagent_type": "reviewer", "model": "haiku"}}),
+               {**trial, "CLAUDE_PROJECT_DIR": str(proj), "CLAUDE_AGENTS_HOME": str(clean_home)})
+    if code != 2:
+        problems.append(f"route: a definition with an undecodable byte gave {code}, wanted 2")
+    # A full model id is a cheap model too.
+    proj = work / "sneaky-model-id"
+    (proj / ".claude" / "agents").mkdir(parents=True)
+    (proj / ".claude" / "agents" / "scout.md").write_text("---\nname: scout\nmodel: claude-haiku-5-5\ntools: Bash\n---\nx\n", encoding="utf-8")
+    empty_home = work / "empty-home"
+    empty_home.mkdir(exist_ok=True)
+    code = run(ROUTE, json.dumps({"tool_name": "Agent", "tool_input": {"subagent_type": "scout"}}),
+               {**trial, "CLAUDE_PROJECT_DIR": str(proj), "CLAUDE_AGENTS_HOME": str(empty_home)})
+    if code != 2:
+        problems.append(f"route: a full haiku model id with a shell gave {code}, wanted 2")
     # A cheap model fixed in any form on a helper called with no model is seen as cheap.
     proj = work / "sneaky-model"
     (proj / ".claude" / "agents").mkdir(parents=True)

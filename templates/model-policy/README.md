@@ -61,4 +61,7 @@ script does not lay it down. It enforces the adopted rule *Triage the models and
   cheap model only if every file that could define it, in the repo's or the user's `.claude/agents/` at any depth, is in
   the kit's own plain format (one-line `name:`, `model:` and `tools:`, no more tools than the kit's). The hook does not
   parse YAML, so anything else is refused rather than guessed at: keep the kit's files as they are.
+- **It catches mistakes, not a repo author dodging their own policy.** A helper file written to disguise its name
+  (YAML escapes such as `"\x73cout"`, a name split across lines) can get past it. Whoever can write
+  `.claude/agents/` can also switch the hook off, so the hook is a routing aid, not a security boundary.
 - **Stopping it:** creating `~/.claude/model-policy-off` stops the routing hook in every repo at once. The guard stays on.

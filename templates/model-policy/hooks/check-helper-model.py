@@ -55,7 +55,7 @@ KIT_TOOLS = {
     "light-editor": {"Read", "Grep", "Glob", "Edit", "Write"},
     "web-researcher": {"WebSearch", "WebFetch"},
 }
-CHEAP_WORD = re.compile(r"(?<![A-Za-z0-9_-])(haiku|sonnet)(?![A-Za-z0-9_-])", re.I)
+CHEAP_WORD = re.compile(r"(haiku|sonnet)", re.I)  # a full id (claude-haiku-5-5) counts too
 
 # This hook does not try to read YAML. YAML has many ways to write the same thing, and every way
 # a parser misreads is a way round the check. Instead it finds every file that could define the
@@ -85,10 +85,14 @@ def candidates(agent_type: str) -> list[tuple[pathlib.Path, str | None]]:
             continue
         for f in files:
             try:
-                text = f.read_text(encoding="utf-8-sig")  # -sig: a byte-order mark must not hide anything
-            except (OSError, ValueError):
+                # Bytes decoded leniently, so a stray byte can't hide a file; a byte-order mark is dropped.
+                text = f.read_bytes().decode("utf-8", errors="replace").lstrip("\ufeff").replace("\r\n", "\n")
+            except OSError:
                 text = None
-            head_match = re.match(r"---[ \t]*\n(.*?)\n---", text, re.S) if text is not None else None
+            # The header ends at the FIRST "---" anywhere, as Claude Code reads it (its own pattern is
+            # /^---\s*\n([\s\S]*?)---\s*\n?/), so a "---" inside a description cuts the header there too.
+            # A header after leading blank lines is read as well, to be safe.
+            head_match = re.match(r"\s*---\s*\n([\s\S]*?)---", text) if text is not None else None
             head = head_match.group(1) if head_match else None
             named = head is not None and any(
                 word.search(line) for line in head.splitlines() if not line.lstrip().lower().startswith("description"))
@@ -127,7 +131,7 @@ def plain_kit_form(head: str | None, agent_type: str) -> bool:
                 return False
             if not set(value.split(", ")) <= KIT_TOOLS[agent_type]:
                 return False
-        if key == "description" and (not value or value[0] in "\"'|>[{&*!%@`" or " #" in value):
+        if key == "description" and (not value or value[0] in "\"'|>[{&*!%@`" or " #" in value or "\\" in value):
             return False
         if key == "hooks":
             if value or agent_type != "light-editor":
